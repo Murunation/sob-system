@@ -1,0 +1,336 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==========================================
+// ENUM-ууд
+// ==========================================
+
+enum Role {
+  ADMIN
+  TEACHER
+  CHEF
+  PARENT
+}
+
+enum StudentStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum AttendanceStatus {
+  PRESENT   // Ирсэн
+  ABSENT    // Тасалсан
+  SICK      // Өвдсөн
+  EXCUSED   // Чөлөөтэй
+}
+
+enum MealStatus {
+  PLANNED       // Төлөвлөсөн
+  CONFIRMED     // Баталгаажсан
+  CLOSED        // Хаагдсан
+}
+
+enum ReviewStatus {
+  DRAFT         // Ноорог
+  SENT          // Илгээсэн
+  READ          // Асран хамгаалагчид харагдсан
+}
+
+enum ReportStatus {
+  SENT          // Илгээсэн
+  CONFIRMED     // Баталгаажсан
+  RETURNED      // Буцаасан
+}
+
+enum FeedbackStatus {
+  PENDING       // Хариу өгөөгүй
+  REPLIED       // Багш хариу өгсөн
+  RESOLVED      // Эрхлэгч хаасан
+}
+
+// ==========================================
+// ХЭРЭГЛЭГЧ (бүх үүрэг нэг table-д)
+// ==========================================
+
+model User {
+  id         Int      @id @default(autoincrement())
+  firstname  String
+  lastname   String
+  phone      String?
+  email      String   @unique
+  username   String   @unique
+  password   String   // bcrypt hash
+  role       Role
+  isArchived Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  teacher    Teacher?
+  chef       Chef?
+  parent     Parent?
+  admin      Admin?
+  notifications Notification[]
+}
+
+// ==========================================
+// ЭРХЛЭГЧ
+// ==========================================
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id])
+
+  reports   Report[]
+}
+
+// ==========================================
+// БАГШ
+// ==========================================
+
+model Teacher {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @unique
+  profession String?
+  isArchived Boolean  @default(false)
+  user       User     @relation(fields: [userId], references: [id])
+
+  group      Group?
+  reviews    Review[]
+  weeklyPlans WeeklyPlan[]
+  feedbacks  Feedback[]
+  attendances Attendance[]
+}
+
+// ==========================================
+// ТОГООЧ
+// ==========================================
+
+model Chef {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @unique
+  isArchived Boolean  @default(false)
+  user       User     @relation(fields: [userId], references: [id])
+
+  meals      Meal[]
+}
+
+// ==========================================
+// АСРАН ХАМГААЛАГЧ
+// ==========================================
+
+model Parent {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  address   String?
+  user      User     @relation(fields: [userId], references: [id])
+
+  students  Student[]
+  feedbacks Feedback[]
+  payments  Payment[]
+}
+
+// ==========================================
+// БҮЛЭГ
+// ==========================================
+
+model Group {
+  id         Int      @id @default(autoincrement())
+  name       String
+  ageRange   String   // "3-4 нас"
+  capacity   Int      @default(25)
+  teacherId  Int?     @unique
+  isArchived Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  teacher    Teacher? @relation(fields: [teacherId], references: [id])
+  students   Student[]
+}
+
+// ==========================================
+// ХҮҮХЭД
+// ==========================================
+
+model Student {
+  id          Int           @id @default(autoincrement())
+  firstname   String
+  lastname    String
+  birthDate   DateTime
+  groupId     Int?
+  parentId    Int?
+  healthInfo  String?       // харшил, онцлог
+  status      StudentStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  group       Group?        @relation(fields: [groupId], references: [id])
+  parent      Parent?       @relation(fields: [parentId], references: [id])
+
+  attendances Attendance[]
+  mealLogs    MealLog[]
+  reviews     Review[]
+  payments    Payment[]
+}
+
+// ==========================================
+// ИРЦИЙН БҮРТГЭЛ
+// ==========================================
+
+model Attendance {
+  id         Int              @id @default(autoincrement())
+  studentId  Int
+  teacherId  Int?
+  date       DateTime
+  status     AttendanceStatus
+  note       String?
+  editedBy   String?          // засварласан хэрэглэгч
+  editedAt   DateTime?
+  createdAt  DateTime         @default(now())
+
+  student    Student          @relation(fields: [studentId], references: [id])
+  teacher    Teacher?         @relation(fields: [teacherId], references: [id])
+}
+
+// ==========================================
+// ХООЛНЫ ЦЭС (өдөр болон 7 хоногоор)
+// ==========================================
+
+model Meal {
+  id             Int        @id @default(autoincrement())
+  chefId         Int
+  date           DateTime   // өдөр бүр эсвэл 7 хоногийн өдөр бүр
+  menu           String     // өглөө/өдөр/орой
+  ingredients    String?
+  allergyFlag    Boolean    @default(false)
+  servedStudents Int?       // хоол идсэн хүүхдийн тоо
+  status         MealStatus @default(PLANNED)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  chef           Chef       @relation(fields: [chefId], references: [id])
+  mealLogs       MealLog[]
+}
+
+// ==========================================
+// ХООЛЛОЛТЫН ТЭМДЭГЛЭЛ (хүүхэд бүрийн)
+// ==========================================
+
+model MealLog {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  mealId    Int
+  eaten     Boolean  @default(true)
+  note      String?
+  createdAt DateTime @default(now())
+
+  student   Student  @relation(fields: [studentId], references: [id])
+  meal      Meal     @relation(fields: [mealId], references: [id])
+}
+
+// ==========================================
+// 7 ХОНОГИЙН ТӨЛӨВЛӨГӨӨ
+// ==========================================
+
+model WeeklyPlan {
+  id          Int      @id @default(autoincrement())
+  teacherId   Int
+  weekStart   DateTime // Даваа гараг
+  content     String
+  monthlyEvent String?
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teacher     Teacher  @relation(fields: [teacherId], references: [id])
+}
+
+// ==========================================
+// ХҮҮХДИЙН ХӨГЖЛИЙН ҮНЭЛГЭЭ
+// ==========================================
+
+model Review {
+  id          Int          @id @default(autoincrement())
+  studentId   Int
+  teacherId   Int
+  behavior    String?
+  development String?
+  note        String?
+  status      ReviewStatus @default(DRAFT)
+  readAt      DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  student     Student      @relation(fields: [studentId], references: [id])
+  teacher     Teacher      @relation(fields: [teacherId], references: [id])
+}
+
+// ==========================================
+// ТӨЛБӨР
+// ==========================================
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  parentId  Int
+  amount    Decimal  @db.Decimal(10, 2)
+  date      DateTime
+  dueDate   DateTime?
+  status    String   // "Төлсөн", "Хугацаа хэтэрсэн", "Хүлээгдэж буй"
+  createdAt DateTime @default(now())
+
+  student   Student  @relation(fields: [studentId], references: [id])
+  parent    Parent   @relation(fields: [parentId], references: [id])
+}
+
+// ==========================================
+// САНАЛ ХҮСЭЛТ (ААХ → Багш, form-based)
+// ==========================================
+
+model Feedback {
+  id        Int            @id @default(autoincrement())
+  parentId  Int
+  teacherId Int
+  message   String
+  reply     String?        // багшийн хариу
+  status    FeedbackStatus @default(PENDING)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  parent    Parent         @relation(fields: [parentId], references: [id])
+  teacher   Teacher        @relation(fields: [teacherId], references: [id])
+}
+
+// ==========================================
+// ТАЙЛАН
+// ==========================================
+
+model Report {
+  id          Int          @id @default(autoincrement())
+  adminId     Int
+  type        String       // "Ирцийн тайлан", "Хоолны тайлан" г.м
+  dateRange   String
+  status      ReportStatus @default(SENT)
+  filePath    String?
+  createdAt   DateTime     @default(now())
+
+  admin       Admin        @relation(fields: [adminId], references: [id])
+}
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+}
