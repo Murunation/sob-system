@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import DashboardLayout from '@/components/ui/DashboardLayout'
 import { getStudents, createStudent, updateStudent, archiveStudent } from '@/app/actions/student'
@@ -28,10 +28,28 @@ const navItems = [
   { href: '/admin/attendance', label: 'Ирцийн засвар', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> },
 ]
 
+function TableSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden animate-pulse">
+      <div className="p-4 space-y-3">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="flex gap-4">
+            <div className="h-4 bg-gray-100 rounded flex-1" />
+            <div className="h-4 bg-gray-100 rounded w-24" />
+            <div className="h-4 bg-gray-100 rounded w-20" />
+            <div className="h-4 bg-gray-100 rounded w-28" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([])
   const [groups, setGroups] = useState<Group[]>([])
   const [parents, setParents] = useState<Parent[]>([])
+  const [dataLoaded, setDataLoaded] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editStudent, setEditStudent] = useState<Student | null>(null)
   const [form, setForm] = useState(emptyForm)
@@ -39,11 +57,16 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
 
-  async function loadData() {
+  // Promise.all-ээр бүгдийг зэрэг дуудна
+  const loadData = useCallback(async () => {
     const [s, g, p] = await Promise.all([getStudents(), getGroups(), getParents()])
-    setStudents(s as any); setGroups(g as any); setParents(p as any)
-  }
-  useEffect(() => { loadData() }, [])
+    setStudents(s as any)
+    setGroups(g as any)
+    setParents(p as any)
+    setDataLoaded(true)
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
 
   function openAdd() { setEditStudent(null); setForm(emptyForm); setErrors({}); setShowModal(true) }
   function openEdit(s: Student) {
@@ -65,88 +88,103 @@ export default function StudentsPage() {
     setErrors(e)
     if (Object.keys(e).length > 0) return
     setLoading(true)
-    if (editStudent) { await updateStudent(editStudent.id, form as any); toast.success('Засагдлаа') }
-    else { await createStudent(form as any); toast.success('Нэмэгдлээ') }
-    setShowModal(false); setErrors({}); await loadData(); setLoading(false)
+    try {
+      if (editStudent) { await updateStudent(editStudent.id, form as any); toast.success('Засагдлаа') }
+      else { await createStudent(form as any); toast.success('Нэмэгдлээ') }
+      setShowModal(false); setErrors({})
+      // Зөвхөн students-ийг reload — groups/parents хэрэггүй
+      const s = await getStudents()
+      setStudents(s as any)
+    } catch (err: any) { toast.error(err.message || 'Алдаа гарлаа') }
+    setLoading(false)
   }
 
   async function handleArchive(id: number) {
     if (!confirm('Архивлах уу?')) return
-    await archiveStudent(id); toast.success('Архивлагдлаа'); await loadData()
+    await archiveStudent(id)
+    toast.success('Архивлагдлаа')
+    const s = await getStudents()
+    setStudents(s as any)
   }
 
-  const filtered = students.filter(s => `${s.firstname} ${s.lastname}`.toLowerCase().includes(search.toLowerCase()))
+  const filtered = students.filter(s =>
+    `${s.firstname} ${s.lastname}`.toLowerCase().includes(search.toLowerCase())
+  )
 
   return (
     <DashboardLayout navItems={navItems} role="Эрхлэгч">
       <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center mb-5">
         <input type="text" placeholder="Хүүхэд хайх..." value={search} onChange={e => setSearch(e.target.value)}
           className="border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-400 w-full sm:w-72" />
-        <button onClick={openAdd} className="bg-[#1E1B4B] text-white px-4 py-2 rounded-xl text-sm hover:bg-[#2d2a6e] transition whitespace-nowrap w-full sm:w-auto">
+        <button onClick={openAdd} className="bg-[#1E1B4B] text-white px-4 py-2 rounded-xl text-sm hover:bg-[#2d2a6e] transition w-full sm:w-auto">
           + Хүүхэд нэмэх
         </button>
       </div>
 
-      {/* Desktop table */}
-      <div className="hidden lg:block bg-white rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500">
-            <tr>
-              <th className="text-left px-5 py-3 font-medium">Нэр</th>
-              <th className="text-left px-5 py-3 font-medium">Төрсөн огноо</th>
-              <th className="text-left px-5 py-3 font-medium">Бүлэг</th>
-              <th className="text-left px-5 py-3 font-medium">Асран хамгаалагч</th>
-              <th className="text-left px-5 py-3 font-medium">Харшил</th>
-              <th className="text-left px-5 py-3 font-medium">Үйлдэл</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(s => (
-              <tr key={s.id} className="border-t border-gray-50 hover:bg-gray-50 transition">
-                <td className="px-5 py-3 font-medium text-gray-800">
-                  {s.lastname} {s.firstname}
-                  {s.healthInfo && <span className="ml-2 text-xs bg-red-100 text-red-500 px-1.5 py-0.5 rounded-lg">⚠️</span>}
-                </td>
-                <td className="px-5 py-3 text-gray-500">{new Date(s.birthDate).toLocaleDateString('mn-MN')}</td>
-                <td className="px-5 py-3 text-gray-600">{s.group?.name || '—'}</td>
-                <td className="px-5 py-3 text-gray-600">{s.parent ? `${s.parent.user.lastname} ${s.parent.user.firstname}` : '—'}</td>
-                <td className="px-5 py-3 text-gray-400 text-xs truncate max-w-[120px]">{s.healthInfo || '—'}</td>
-                <td className="px-5 py-3">
-                  <div className="flex gap-3">
-                    <button onClick={() => openEdit(s)} className="text-purple-600 hover:underline text-xs font-medium">Засах</button>
-                    <button onClick={() => handleArchive(s.id)} className="text-red-400 hover:underline text-xs font-medium">Архивлах</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-300">Хүүхэд олдсонгүй</td></tr>}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile cards */}
-      <div className="lg:hidden space-y-3">
-        {filtered.map(s => (
-          <div key={s.id} className="bg-white rounded-2xl p-4 shadow-sm">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <p className="font-semibold text-gray-800">{s.lastname} {s.firstname}</p>
-                <p className="text-xs text-gray-400">{new Date(s.birthDate).toLocaleDateString('mn-MN')}</p>
-              </div>
-              {s.healthInfo && <span className="text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded-full">⚠️ харшил</span>}
-            </div>
-            <div className="flex gap-2 text-xs text-gray-500 mb-3">
-              <span className="bg-gray-100 px-2 py-1 rounded-lg">{s.group?.name || 'Бүлэггүй'}</span>
-              {s.parent && <span className="bg-gray-100 px-2 py-1 rounded-lg">{s.parent.user.lastname} {s.parent.user.firstname}</span>}
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => openEdit(s)} className="flex-1 text-xs text-purple-600 border border-purple-200 rounded-xl py-1.5 hover:bg-purple-50">Засах</button>
-              <button onClick={() => handleArchive(s.id)} className="flex-1 text-xs text-red-400 border border-red-200 rounded-xl py-1.5 hover:bg-red-50">Архивлах</button>
-            </div>
+      {!dataLoaded ? <TableSkeleton /> : (
+        <>
+          {/* Desktop table */}
+          <div className="hidden lg:block bg-white rounded-2xl shadow-sm overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500">
+                <tr>
+                  <th className="text-left px-5 py-3 font-medium">Нэр</th>
+                  <th className="text-left px-5 py-3 font-medium">Төрсөн огноо</th>
+                  <th className="text-left px-5 py-3 font-medium">Бүлэг</th>
+                  <th className="text-left px-5 py-3 font-medium">Асран хамгаалагч</th>
+                  <th className="text-left px-5 py-3 font-medium">Харшил</th>
+                  <th className="text-left px-5 py-3 font-medium">Үйлдэл</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(s => (
+                  <tr key={s.id} className="border-t border-gray-50 hover:bg-gray-50 transition">
+                    <td className="px-5 py-3 font-medium text-gray-800">
+                      {s.lastname} {s.firstname}
+                      {s.healthInfo && <span className="ml-2 text-xs bg-red-100 text-red-500 px-1.5 py-0.5 rounded-lg">⚠️</span>}
+                    </td>
+                    <td className="px-5 py-3 text-gray-500">{new Date(s.birthDate).toLocaleDateString('mn-MN')}</td>
+                    <td className="px-5 py-3 text-gray-600">{s.group?.name || '—'}</td>
+                    <td className="px-5 py-3 text-gray-600">{s.parent ? `${s.parent.user.lastname} ${s.parent.user.firstname}` : '—'}</td>
+                    <td className="px-5 py-3 text-gray-400 text-xs truncate max-w-[120px]">{s.healthInfo || '—'}</td>
+                    <td className="px-5 py-3">
+                      <div className="flex gap-3">
+                        <button onClick={() => openEdit(s)} className="text-purple-600 hover:underline text-xs font-medium">Засах</button>
+                        <button onClick={() => handleArchive(s.id)} className="text-red-400 hover:underline text-xs font-medium">Архивлах</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-300">Хүүхэд олдсонгүй</td></tr>}
+              </tbody>
+            </table>
           </div>
-        ))}
-        {filtered.length === 0 && <div className="bg-white rounded-2xl p-8 text-center text-gray-300">Хүүхэд олдсонгүй</div>}
-      </div>
+
+          {/* Mobile cards */}
+          <div className="lg:hidden space-y-3">
+            {filtered.map(s => (
+              <div key={s.id} className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <p className="font-semibold text-gray-800">{s.lastname} {s.firstname}</p>
+                    <p className="text-xs text-gray-400">{new Date(s.birthDate).toLocaleDateString('mn-MN')}</p>
+                  </div>
+                  {s.healthInfo && <span className="text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded-full">⚠️</span>}
+                </div>
+                <div className="flex gap-2 text-xs text-gray-500 mb-3 flex-wrap">
+                  <span className="bg-gray-100 px-2 py-1 rounded-lg">{s.group?.name || 'Бүлэггүй'}</span>
+                  {s.parent && <span className="bg-gray-100 px-2 py-1 rounded-lg">{s.parent.user.lastname} {s.parent.user.firstname}</span>}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => openEdit(s)} className="flex-1 text-xs text-purple-600 border border-purple-200 rounded-xl py-1.5 hover:bg-purple-50">Засах</button>
+                  <button onClick={() => handleArchive(s.id)} className="flex-1 text-xs text-red-400 border border-red-200 rounded-xl py-1.5 hover:bg-red-50">Архивлах</button>
+                </div>
+              </div>
+            ))}
+            {filtered.length === 0 && <div className="bg-white rounded-2xl p-8 text-center text-gray-300">Хүүхэд олдсонгүй</div>}
+          </div>
+        </>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
