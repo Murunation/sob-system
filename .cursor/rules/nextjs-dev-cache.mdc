@@ -1,0 +1,14 @@
+---
+description: Avoid Next.js dev cache corruption, Turbopack/Webpack RSC mismatch, and chunk 404s
+alwaysApply: true
+---
+
+## Dev server
+
+- **Default `npm run dev`** is `next dev` (Webpack). Next 14.2 can throw `Expected to use Webpack bindings ... but ... Turbopack bindings` if `.next` was deleted or corrupted while a **Turbopack** session was still running, or after mixing Turbo/Webpack outputs; that breaks `/login` (500/404) and `/_next/static/*` (404).
+- **Optional speed:** `npm run dev:turbo` — only after a **full stop** of any prior dev process, then prefer `npm run dev:clean:turbo` so `.next` is fresh.
+- If chunk / `MODULE_NOT_FOUND` / `/_next/static/...` 404s appear: **stop the dev server**, run `npm run clean`, then `npm run dev` (or `npm run dev:clean`). Do not delete `.next` while `next dev` is still running.
+
+## Config
+
+- `next.config.mjs` sets `webpack(..., { dev }) => dev && (config.cache = false)` so dev does not rely on flaky webpack disk cache. Avoid extra `webpack()` hooks unless needed; Turbopack ignores them and may warn.

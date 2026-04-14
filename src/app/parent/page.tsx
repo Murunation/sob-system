@@ -1,92 +1,45 @@
 'use client'
 
-import NotificationBell from '@/components/ui/NotificationBell'
-import { useSession, signOut } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import DashboardLayout from '@/components/ui/DashboardLayout'
+import { parentNavItems } from './parent-nav'
 
 export default function ParentDashboard() {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const router = useRouter()
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/login')
   }, [status, router])
 
-  if (status === 'loading') return <div className="p-8">Уншиж байна...</div>
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-[#F7F6F3] flex items-center justify-center text-gray-400">
+        Уншиж байна...
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
-  <div>
-    <h1 className="text-xl font-bold text-gray-800">Эцэг эхийн дэлгэц</h1>
-    <p className="text-sm text-gray-500">{session?.user?.name}</p>
-  </div>
-  <div className="flex items-center gap-3">
-    <NotificationBell />
-    <button onClick={() => signOut({ callbackUrl: '/login' })} className="text-sm text-red-500 hover:text-red-700">
-      Гарах
-    </button>
-  </div>
-</header>
-
-      <main className="p-6 max-w-6xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+    <DashboardLayout navItems={parentNavItems} role="Эцэг эх">
+      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Түргэн холбоос</h2>
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+        {parentNavItems.slice(1).map((item) => (
           <button
-            onClick={() => router.push('/parent/attendance')}
-            className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition text-left"
+            key={item.href}
+            type="button"
+            onClick={() => router.push(item.href)}
+            className="bg-white rounded-2xl p-4 lg:p-5 shadow-sm hover:shadow-md transition text-left group"
           >
-            <div className="text-2xl mb-2">📋</div>
-            <h3 className="font-semibold text-gray-800">Ирцийн мэдээлэл</h3>
-            <p className="text-sm text-gray-500 mt-1">Хүүхдийн ирцийг харах</p>
+            <div className="w-9 h-9 lg:w-10 lg:h-10 bg-[#F0EEFF] rounded-xl flex items-center justify-center mb-3 group-hover:bg-[#1E1B4B] transition-colors">
+              <span className="text-[#6B4EFF] group-hover:text-white transition-colors">{item.icon}</span>
+            </div>
+            <p className="font-semibold text-gray-800 text-xs lg:text-sm leading-snug">{item.label}</p>
           </button>
-
-          <button
-            onClick={() => router.push('/parent/meal')}
-            className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition text-left"
-          >
-            <div className="text-2xl mb-2">🍱</div>
-            <h3 className="font-semibold text-gray-800">Хоолны цэс</h3>
-            <p className="text-sm text-gray-500 mt-1">Өдрийн цэс харах</p>
-          </button>
-
-          <button
-            onClick={() => router.push('/parent/reviews')}
-            className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition text-left"
-          >
-            <div className="text-2xl mb-2">📝</div>
-            <h3 className="font-semibold text-gray-800">Хөгжлийн үнэлгээ</h3>
-            <p className="text-sm text-gray-500 mt-1">Багшийн үнэлгээ унших</p>
-          </button>
-
-          <button
-            onClick={() => router.push('/parent/weekly-plan')}
-            className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition text-left"
-          >
-            <div className="text-2xl mb-2">📅</div>
-            <h3 className="font-semibold text-gray-800">Хичээлийн төлөвлөгөө</h3>
-            <p className="text-sm text-gray-500 mt-1">7 хоногийн төлөвлөгөө харах</p>
-          </button>
-
-          <button
-            onClick={() => router.push('/parent/feedback')}
-            className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition text-left"
-          >
-            <div className="text-2xl mb-2">💬</div>
-            <h3 className="font-semibold text-gray-800">Санал хүсэлт</h3>
-            <p className="text-sm text-gray-500 mt-1">Багшид санал хүсэлт илгээх</p>
-          </button>
-
-          <button
-            onClick={() => router.push('/parent/payment')}
-            className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition text-left"
-          >
-            <div className="text-2xl mb-2">💳</div>
-            <h3 className="font-semibold text-gray-800">Төлбөр</h3>
-            <p className="text-sm text-gray-500 mt-1">Төлбөрийн мэдээлэл харах</p>
-          </button>
-        </div>
-      </main>
-    </div>
+        ))}
+      </div>
+    </DashboardLayout>
   )
 }

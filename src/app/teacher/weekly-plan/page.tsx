@@ -1,13 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import {
-  getMyWeeklyPlans,
-  createWeeklyPlan,
-  updateWeeklyPlan,
-} from '@/app/actions/weekly-plan'
+import DashboardLayout from '@/components/ui/DashboardLayout'
+import { teacherNavItems } from '@/app/teacher/teacher-nav'
+import { getMyWeeklyPlans, createWeeklyPlan, updateWeeklyPlan } from '@/app/actions/weekly-plan'
 
 type WeeklyPlan = {
   id: number
@@ -24,7 +21,6 @@ const emptyForm = {
   monthlyEvent: '',
 }
 
-// Даваа гарагийг олох
 function getMonday(date: Date) {
   const d = new Date(date)
   const day = d.getDay()
@@ -34,7 +30,6 @@ function getMonday(date: Date) {
 }
 
 export default function WeeklyPlanPage() {
-  const router = useRouter()
   const [plans, setPlans] = useState<WeeklyPlan[]>([])
   const [showModal, setShowModal] = useState(false)
   const [editPlan, setEditPlan] = useState<WeeklyPlan | null>(null)
@@ -47,7 +42,9 @@ export default function WeeklyPlanPage() {
     setPlans(p as any)
   }
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => {
+    loadData()
+  }, [])
 
   function openAdd() {
     setEditPlan(null)
@@ -111,88 +108,80 @@ export default function WeeklyPlanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/teacher')} className="text-gray-400 hover:text-gray-600">
-            ← Буцах
-          </button>
-          <h1 className="text-xl font-bold text-gray-800">7 хоногийн төлөвлөгөө</h1>
-        </div>
+    <DashboardLayout navItems={teacherNavItems} role="Багш">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end mb-5">
         <button
+          type="button"
           onClick={openAdd}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"
+          className="bg-[#1E1B4B] text-white px-4 py-2.5 rounded-xl text-sm hover:bg-[#2d2a6e] transition w-full sm:w-auto"
         >
           + Төлөвлөгөө нэмэх
         </button>
-      </header>
+      </div>
 
-      <main className="p-6 max-w-4xl mx-auto">
-        <div className="space-y-4">
-          {plans.map(p => (
-            <div key={p.id} className="bg-white rounded-xl p-5 shadow-sm">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="font-semibold text-gray-800">
-                    {new Date(p.weekStart).toLocaleDateString('mn-MN')} — долоо хоног
-                  </h3>
-                  {p.monthlyEvent && (
-                    <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full mt-1 inline-block">
-                      📅 {p.monthlyEvent}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => openEdit(p)}
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  Засах
-                </button>
+      <div className="space-y-4">
+        {plans.map((p) => (
+          <div key={p.id} className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-gray-800 text-sm sm:text-base">
+                  {new Date(p.weekStart).toLocaleDateString('mn-MN')} — долоо хоног
+                </h3>
+                {p.monthlyEvent && (
+                  <span className="text-xs bg-[#F0EEFF] text-[#6B4EFF] px-2 py-0.5 rounded-full mt-2 inline-block">
+                    {p.monthlyEvent}
+                  </span>
+                )}
               </div>
-              <p className="text-sm text-gray-600 whitespace-pre-line">{p.content}</p>
-              <p className="text-xs text-gray-400 mt-2">
-                Шинэчлэгдсэн: {new Date(p.updatedAt).toLocaleDateString('mn-MN')}
-              </p>
+              <button
+                type="button"
+                onClick={() => openEdit(p)}
+                className="text-sm text-purple-600 hover:underline font-medium shrink-0 self-start"
+              >
+                Засах
+              </button>
             </div>
-          ))}
-          {plans.length === 0 && (
-            <div className="bg-white rounded-xl p-8 text-center text-gray-400">
-              Төлөвлөгөө байхгүй байна
-            </div>
-          )}
-        </div>
-      </main>
+            <p className="text-sm text-gray-600 whitespace-pre-line mt-3">{p.content}</p>
+            <p className="text-xs text-gray-400 mt-3">
+              Шинэчлэгдсэн: {new Date(p.updatedAt).toLocaleDateString('mn-MN')}
+            </p>
+          </div>
+        ))}
+        {plans.length === 0 && (
+          <div className="bg-white rounded-2xl p-10 text-center text-gray-300 shadow-sm">Төлөвлөгөө байхгүй байна</div>
+        )}
+      </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg shadow-xl">
-            <h2 className="text-lg font-bold mb-4">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold mb-4 text-gray-800">
               {editPlan ? 'Төлөвлөгөө засах' : 'Төлөвлөгөө нэмэх'}
             </h2>
 
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-medium text-gray-700">
-                  Долоо хоногийн эхлэх огноо (Даваа)
-                </label>
+                <label className="text-xs font-medium text-gray-600">Долоо хоногийн эхлэх огноо (Даваа)</label>
                 <input
                   type="date"
                   value={form.weekStart}
-                  onChange={e => setForm({ ...form, weekStart: e.target.value })}
+                  onChange={(e) => setForm({ ...form, weekStart: e.target.value })}
                   disabled={!!editPlan}
-                  className={`w-full border rounded-lg px-3 py-2 text-sm mt-1 ${
-                    errors.weekStart ? 'border-red-500' : 'border-gray-300'
-                  } ${editPlan ? 'bg-gray-50 text-gray-400' : ''}`}
+                  className={`w-full border rounded-xl px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-purple-400 ${
+                    errors.weekStart ? 'border-red-400' : 'border-gray-200'
+                  } ${editPlan ? 'bg-gray-50 text-gray-500' : 'bg-white'}`}
                 />
                 {errors.weekStart && <p className="text-red-500 text-xs mt-1">{errors.weekStart}</p>}
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700">Төлөвлөгөөний агуулга</label>
+                <label className="text-xs font-medium text-gray-600">Төлөвлөгөөний агуулга</label>
                 <textarea
                   value={form.content}
-                  onChange={e => setForm({ ...form, content: e.target.value })}
-                  className={`w-full border rounded-lg px-3 py-2 text-sm mt-1 ${errors.content ? 'border-red-500' : 'border-gray-300'}`}
+                  onChange={(e) => setForm({ ...form, content: e.target.value })}
+                  className={`w-full border rounded-xl px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-purple-400 ${
+                    errors.content ? 'border-red-400' : 'border-gray-200'
+                  }`}
                   rows={6}
                   placeholder="Даваа: Тоолох дасгал&#10;Мягмар: Зураг зурах&#10;Лхагва: Дуу хөгжим..."
                 />
@@ -200,32 +189,35 @@ export default function WeeklyPlanPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700">
-                  Сарын арга хэмжээ
-                  <span className="text-gray-400 font-normal ml-1">(заавал биш)</span>
+                <label className="text-xs font-medium text-gray-600">
+                  Сарын арга хэмжээ <span className="text-gray-400 font-normal">(заавал биш)</span>
                 </label>
                 <input
                   type="text"
                   value={form.monthlyEvent}
-                  onChange={e => setForm({ ...form, monthlyEvent: e.target.value })}
-                  className={`w-full border rounded-lg px-3 py-2 text-sm mt-1 ${errors.monthlyEvent ? 'border-red-500' : 'border-gray-300'}`}
+                  onChange={(e) => setForm({ ...form, monthlyEvent: e.target.value })}
+                  className={`w-full border rounded-xl px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-purple-400 ${
+                    errors.monthlyEvent ? 'border-red-400' : 'border-gray-200'
+                  }`}
                   placeholder="Цэцэрлэгийн баяр..."
                 />
                 {errors.monthlyEvent && <p className="text-red-500 text-xs mt-1">{errors.monthlyEvent}</p>}
               </div>
             </div>
 
-            <div className="flex gap-2 mt-4">
+            <div className="flex flex-col-reverse sm:flex-row gap-2 mt-5">
               <button
+                type="button"
                 onClick={() => setShowModal(false)}
-                className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm"
+                className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm hover:bg-gray-50"
               >
                 Болих
               </button>
               <button
+                type="button"
                 onClick={handleSubmit}
                 disabled={loading}
-                className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+                className="flex-1 bg-[#1E1B4B] text-white py-2.5 rounded-xl text-sm hover:bg-[#2d2a6e] disabled:opacity-50 transition"
               >
                 {loading ? 'Хадгалж байна...' : 'Хадгалах'}
               </button>
@@ -233,6 +225,6 @@ export default function WeeklyPlanPage() {
           </div>
         </div>
       )}
-    </div>
+    </DashboardLayout>
   )
 }

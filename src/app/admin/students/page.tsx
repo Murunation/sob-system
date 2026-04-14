@@ -1,44 +1,34 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import {
-  getStudents,
-  createStudent,
-  updateStudent,
-  archiveStudent,
-} from '@/app/actions/student'
+import DashboardLayout from '@/components/ui/DashboardLayout'
+import { getStudents, createStudent, updateStudent, archiveStudent } from '@/app/actions/student'
 import { getGroups } from '@/app/actions/group'
 import { getParents } from '@/app/actions/parent'
 
 type Student = {
-  id: number
-  firstname: string
-  lastname: string
-  birthDate: string
-  groupId: number | null
-  parentId: number | null
-  healthInfo: string | null
-  status: string
+  id: number; firstname: string; lastname: string; birthDate: string
+  groupId: number | null; parentId: number | null; healthInfo: string | null; status: string
   group: { id: number; name: string } | null
   parent: { id: number; user: { firstname: string; lastname: string } } | null
 }
-
 type Group = { id: number; name: string }
 type Parent = { id: number; user: { firstname: string; lastname: string } }
 
-const emptyForm = {
-  firstname: '',
-  lastname: '',
-  birthDate: '',
-  groupId: 0,
-  parentId: 0,
-  healthInfo: '',
-}
+const emptyForm = { firstname: '', lastname: '', birthDate: '', groupId: 0, parentId: 0, healthInfo: '' }
+
+const navItems = [
+  { href: '/admin', label: 'Нүүр', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+  { href: '/admin/students', label: 'Хүүхдийн бүртгэл', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> },
+  { href: '/admin/teachers', label: 'Багшийн бүртгэл', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+  { href: '/admin/groups', label: 'Бүлгийн удирдлага', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> },
+  { href: '/admin/reports', label: 'Тайлан', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg> },
+  { href: '/admin/feedback', label: 'Санал хүсэлт', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+  { href: '/admin/attendance', label: 'Ирцийн засвар', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> },
+]
 
 export default function StudentsPage() {
-  const router = useRouter()
   const [students, setStudents] = useState<Student[]>([])
   const [groups, setGroups] = useState<Group[]>([])
   const [parents, setParents] = useState<Parent[]>([])
@@ -51,272 +41,169 @@ export default function StudentsPage() {
 
   async function loadData() {
     const [s, g, p] = await Promise.all([getStudents(), getGroups(), getParents()])
-    setStudents(s as any)
-    setGroups(g as any)
-    setParents(p as any)
+    setStudents(s as any); setGroups(g as any); setParents(p as any)
   }
-
   useEffect(() => { loadData() }, [])
 
-  function openAdd() {
-    setEditStudent(null)
-    setForm(emptyForm)
-    setErrors({})
-    setShowModal(true)
-  }
-
+  function openAdd() { setEditStudent(null); setForm(emptyForm); setErrors({}); setShowModal(true) }
   function openEdit(s: Student) {
     setEditStudent(s)
-    setForm({
-      firstname: s.firstname,
-      lastname: s.lastname,
-      birthDate: new Date(s.birthDate).toISOString().split('T')[0],
-      groupId: s.groupId || 0,
-      parentId: s.parentId || 0,
-      healthInfo: s.healthInfo || '',
-    })
-    setErrors({})
-    setShowModal(true)
+    setForm({ firstname: s.firstname, lastname: s.lastname, birthDate: new Date(s.birthDate).toISOString().split('T')[0], groupId: s.groupId || 0, parentId: s.parentId || 0, healthInfo: s.healthInfo || '' })
+    setErrors({}); setShowModal(true)
   }
 
   async function handleSubmit() {
-    const newErrors: Record<string, string> = {}
-
-    if (!form.lastname.trim()) {
-      newErrors.lastname = 'Овог оруулна уу'
-    } else if (!/^[А-ЯӨҮа-яөүA-Za-z\s]+$/.test(form.lastname.trim())) {
-      newErrors.lastname = 'Овог зөвхөн үсэг агуулна'
-    }
-
-    if (!form.firstname.trim()) {
-      newErrors.firstname = 'Нэр оруулна уу'
-    } else if (!/^[А-ЯӨҮа-яөүA-Za-z\s]+$/.test(form.firstname.trim())) {
-      newErrors.firstname = 'Нэр зөвхөн үсэг агуулна'
-    }
-
-    if (!form.birthDate) {
-      newErrors.birthDate = 'Төрсөн огноо оруулна уу'
-    } else {
-      const age = new Date().getFullYear() - new Date(form.birthDate).getFullYear()
-      if (age < 1 || age > 7) newErrors.birthDate = 'Нас 1-7 байх ёстой'
-    }
-
-    if (!form.groupId) newErrors.groupId = 'Бүлэг сонгоно уу'
-    if (!form.parentId) newErrors.parentId = 'Асран хамгаалагч сонгоно уу'
-
-    setErrors(newErrors)
-    if (Object.keys(newErrors).length > 0) return
-
+    const e: Record<string, string> = {}
+    if (!form.lastname.trim()) e.lastname = 'Овог оруулна уу'
+    else if (!/^[А-ЯӨҮа-яөүA-Za-z\s]+$/.test(form.lastname.trim())) e.lastname = 'Зөвхөн үсэг агуулна'
+    if (!form.firstname.trim()) e.firstname = 'Нэр оруулна уу'
+    else if (!/^[А-ЯӨҮа-яөүA-Za-z\s]+$/.test(form.firstname.trim())) e.firstname = 'Зөвхөн үсэг агуулна'
+    if (!form.birthDate) e.birthDate = 'Огноо оруулна уу'
+    else { const age = new Date().getFullYear() - new Date(form.birthDate).getFullYear(); if (age < 1 || age > 7) e.birthDate = 'Нас 1-7 байх ёстой' }
+    if (!form.groupId) e.groupId = 'Бүлэг сонгоно уу'
+    if (!form.parentId) e.parentId = 'Асран хамгаалагч сонгоно уу'
+    setErrors(e)
+    if (Object.keys(e).length > 0) return
     setLoading(true)
-    if (editStudent) {
-      await updateStudent(editStudent.id, form as any)
-      toast.success('Хүүхдийн мэдээлэл амжилттай засагдлаа')
-    } else {
-      await createStudent(form as any)
-      toast.success('Хүүхэд амжилттай нэмэгдлээ')
-    }
-    setShowModal(false)
-    setErrors({})
-    await loadData()
-    setLoading(false)
+    if (editStudent) { await updateStudent(editStudent.id, form as any); toast.success('Засагдлаа') }
+    else { await createStudent(form as any); toast.success('Нэмэгдлээ') }
+    setShowModal(false); setErrors({}); await loadData(); setLoading(false)
   }
 
   async function handleArchive(id: number) {
-    if (!confirm('Энэ хүүхдийг архивлах уу?')) return
-    await archiveStudent(id)
-    toast.success('Хүүхэд архивлагдлаа')
-    await loadData()
+    if (!confirm('Архивлах уу?')) return
+    await archiveStudent(id); toast.success('Архивлагдлаа'); await loadData()
   }
 
-  const filtered = students.filter(s =>
-    `${s.firstname} ${s.lastname}`.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = students.filter(s => `${s.firstname} ${s.lastname}`.toLowerCase().includes(search.toLowerCase()))
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/admin')} className="text-gray-400 hover:text-gray-600">
-            ← Буцах
-          </button>
-          <h1 className="text-xl font-bold text-gray-800">Хүүхдийн бүртгэл</h1>
-        </div>
-        <button
-          onClick={openAdd}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"
-        >
+    <DashboardLayout navItems={navItems} role="Эрхлэгч">
+      <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center mb-5">
+        <input type="text" placeholder="Хүүхэд хайх..." value={search} onChange={e => setSearch(e.target.value)}
+          className="border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-400 w-full sm:w-72" />
+        <button onClick={openAdd} className="bg-[#1E1B4B] text-white px-4 py-2 rounded-xl text-sm hover:bg-[#2d2a6e] transition whitespace-nowrap w-full sm:w-auto">
           + Хүүхэд нэмэх
         </button>
-      </header>
+      </div>
 
-      <main className="p-6 max-w-6xl mx-auto">
-        <input
-          type="text"
-          placeholder="Хүүхэд хайх..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full max-w-sm border border-gray-300 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600">
-              <tr>
-                <th className="text-left px-4 py-3">Нэр</th>
-                <th className="text-left px-4 py-3">Төрсөн огноо</th>
-                <th className="text-left px-4 py-3">Бүлэг</th>
-                <th className="text-left px-4 py-3">Асран хамгаалагч</th>
-                <th className="text-left px-4 py-3">Харшил</th>
-                <th className="text-left px-4 py-3">Үйлдэл</th>
+      {/* Desktop table */}
+      <div className="hidden lg:block bg-white rounded-2xl shadow-sm overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-gray-500">
+            <tr>
+              <th className="text-left px-5 py-3 font-medium">Нэр</th>
+              <th className="text-left px-5 py-3 font-medium">Төрсөн огноо</th>
+              <th className="text-left px-5 py-3 font-medium">Бүлэг</th>
+              <th className="text-left px-5 py-3 font-medium">Асран хамгаалагч</th>
+              <th className="text-left px-5 py-3 font-medium">Харшил</th>
+              <th className="text-left px-5 py-3 font-medium">Үйлдэл</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(s => (
+              <tr key={s.id} className="border-t border-gray-50 hover:bg-gray-50 transition">
+                <td className="px-5 py-3 font-medium text-gray-800">
+                  {s.lastname} {s.firstname}
+                  {s.healthInfo && <span className="ml-2 text-xs bg-red-100 text-red-500 px-1.5 py-0.5 rounded-lg">⚠️</span>}
+                </td>
+                <td className="px-5 py-3 text-gray-500">{new Date(s.birthDate).toLocaleDateString('mn-MN')}</td>
+                <td className="px-5 py-3 text-gray-600">{s.group?.name || '—'}</td>
+                <td className="px-5 py-3 text-gray-600">{s.parent ? `${s.parent.user.lastname} ${s.parent.user.firstname}` : '—'}</td>
+                <td className="px-5 py-3 text-gray-400 text-xs truncate max-w-[120px]">{s.healthInfo || '—'}</td>
+                <td className="px-5 py-3">
+                  <div className="flex gap-3">
+                    <button onClick={() => openEdit(s)} className="text-purple-600 hover:underline text-xs font-medium">Засах</button>
+                    <button onClick={() => handleArchive(s.id)} className="text-red-400 hover:underline text-xs font-medium">Архивлах</button>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {filtered.map(s => (
-                <tr key={s.id} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium">
-                    {s.lastname} {s.firstname}
-                    {s.healthInfo && (
-                      <span className="ml-2 text-xs bg-red-100 text-red-600 px-1 rounded">⚠️ харшил</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">
-                    {new Date(s.birthDate).toLocaleDateString('mn-MN')}
-                  </td>
-                  <td className="px-4 py-3">{s.group?.name || '-'}</td>
-                  <td className="px-4 py-3">
-                    {s.parent ? `${s.parent.user.lastname} ${s.parent.user.firstname}` : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{s.healthInfo || '-'}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <button onClick={() => openEdit(s)} className="text-blue-600 hover:underline text-xs">
-                        Засах
-                      </button>
-                      <button onClick={() => handleArchive(s.id)} className="text-red-500 hover:underline text-xs">
-                        Архивлах
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
-                    Хүүхэд олдсонгүй
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </main>
+            ))}
+            {filtered.length === 0 && <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-300">Хүүхэд олдсонгүй</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="lg:hidden space-y-3">
+        {filtered.map(s => (
+          <div key={s.id} className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <p className="font-semibold text-gray-800">{s.lastname} {s.firstname}</p>
+                <p className="text-xs text-gray-400">{new Date(s.birthDate).toLocaleDateString('mn-MN')}</p>
+              </div>
+              {s.healthInfo && <span className="text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded-full">⚠️ харшил</span>}
+            </div>
+            <div className="flex gap-2 text-xs text-gray-500 mb-3">
+              <span className="bg-gray-100 px-2 py-1 rounded-lg">{s.group?.name || 'Бүлэггүй'}</span>
+              {s.parent && <span className="bg-gray-100 px-2 py-1 rounded-lg">{s.parent.user.lastname} {s.parent.user.firstname}</span>}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => openEdit(s)} className="flex-1 text-xs text-purple-600 border border-purple-200 rounded-xl py-1.5 hover:bg-purple-50">Засах</button>
+              <button onClick={() => handleArchive(s.id)} className="flex-1 text-xs text-red-400 border border-red-200 rounded-xl py-1.5 hover:bg-red-50">Архивлах</button>
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && <div className="bg-white rounded-2xl p-8 text-center text-gray-300">Хүүхэд олдсонгүй</div>}
+      </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-lg font-bold mb-4">
-              {editStudent ? 'Хүүхэд засах' : 'Хүүхэд нэмэх'}
-            </h2>
-
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl p-5 w-full sm:max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold mb-4 text-gray-800">{editStudent ? 'Хүүхэд засах' : 'Хүүхэд нэмэх'}</h2>
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-medium text-gray-700">Овог</label>
-                <input
-                  type="text"
-                  value={form.lastname}
-                  onChange={e => setForm({ ...form, lastname: e.target.value })}
-                  className={`w-full border rounded-lg px-3 py-2 text-sm mt-1 ${errors.lastname ? 'border-red-500' : 'border-gray-300'}`}
-                />
-                {errors.lastname && <p className="text-red-500 text-xs mt-1">{errors.lastname}</p>}
+                <label className="text-xs font-medium text-gray-600">Овог</label>
+                <input type="text" value={form.lastname} onChange={e => setForm({ ...form, lastname: e.target.value })}
+                  className={`w-full border rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-purple-400 ${errors.lastname ? 'border-red-400' : 'border-gray-200'}`} />
+                {errors.lastname && <p className="text-red-400 text-xs mt-1">{errors.lastname}</p>}
               </div>
-
               <div>
-                <label className="text-sm font-medium text-gray-700">Нэр</label>
-                <input
-                  type="text"
-                  value={form.firstname}
-                  onChange={e => setForm({ ...form, firstname: e.target.value })}
-                  className={`w-full border rounded-lg px-3 py-2 text-sm mt-1 ${errors.firstname ? 'border-red-500' : 'border-gray-300'}`}
-                />
-                {errors.firstname && <p className="text-red-500 text-xs mt-1">{errors.firstname}</p>}
+                <label className="text-xs font-medium text-gray-600">Нэр</label>
+                <input type="text" value={form.firstname} onChange={e => setForm({ ...form, firstname: e.target.value })}
+                  className={`w-full border rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-purple-400 ${errors.firstname ? 'border-red-400' : 'border-gray-200'}`} />
+                {errors.firstname && <p className="text-red-400 text-xs mt-1">{errors.firstname}</p>}
               </div>
-
               <div>
-                <label className="text-sm font-medium text-gray-700">Төрсөн огноо</label>
-                <input
-                  type="date"
-                  value={form.birthDate}
-                  onChange={e => setForm({ ...form, birthDate: e.target.value })}
-                  className={`w-full border rounded-lg px-3 py-2 text-sm mt-1 ${errors.birthDate ? 'border-red-500' : 'border-gray-300'}`}
-                />
-                {errors.birthDate && <p className="text-red-500 text-xs mt-1">{errors.birthDate}</p>}
+                <label className="text-xs font-medium text-gray-600">Төрсөн огноо</label>
+                <input type="date" value={form.birthDate} onChange={e => setForm({ ...form, birthDate: e.target.value })}
+                  className={`w-full border rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-purple-400 ${errors.birthDate ? 'border-red-400' : 'border-gray-200'}`} />
+                {errors.birthDate && <p className="text-red-400 text-xs mt-1">{errors.birthDate}</p>}
               </div>
-
               <div>
-                <label className="text-sm font-medium text-gray-700">Бүлэг</label>
-                <select
-                  value={form.groupId}
-                  onChange={e => setForm({ ...form, groupId: Number(e.target.value) })}
-                  className={`w-full border rounded-lg px-3 py-2 text-sm mt-1 ${errors.groupId ? 'border-red-500' : 'border-gray-300'}`}
-                >
+                <label className="text-xs font-medium text-gray-600">Бүлэг</label>
+                <select value={form.groupId} onChange={e => setForm({ ...form, groupId: Number(e.target.value) })}
+                  className={`w-full border rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-purple-400 ${errors.groupId ? 'border-red-400' : 'border-gray-200'}`}>
                   <option value={0}>Сонгох...</option>
-                  {groups.map(g => (
-                    <option key={g.id} value={g.id}>{g.name}</option>
-                  ))}
+                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                 </select>
-                {errors.groupId && <p className="text-red-500 text-xs mt-1">{errors.groupId}</p>}
+                {errors.groupId && <p className="text-red-400 text-xs mt-1">{errors.groupId}</p>}
               </div>
-
               <div>
-                <label className="text-sm font-medium text-gray-700">Асран хамгаалагч</label>
-                <select
-                  value={form.parentId}
-                  onChange={e => setForm({ ...form, parentId: Number(e.target.value) })}
-                  className={`w-full border rounded-lg px-3 py-2 text-sm mt-1 ${errors.parentId ? 'border-red-500' : 'border-gray-300'}`}
-                >
+                <label className="text-xs font-medium text-gray-600">Асран хамгаалагч</label>
+                <select value={form.parentId} onChange={e => setForm({ ...form, parentId: Number(e.target.value) })}
+                  className={`w-full border rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-purple-400 ${errors.parentId ? 'border-red-400' : 'border-gray-200'}`}>
                   <option value={0}>Сонгох...</option>
-                  {parents.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.user.lastname} {p.user.firstname}
-                    </option>
-                  ))}
+                  {parents.map(p => <option key={p.id} value={p.id}>{p.user.lastname} {p.user.firstname}</option>)}
                 </select>
-                {errors.parentId && <p className="text-red-500 text-xs mt-1">{errors.parentId}</p>}
+                {errors.parentId && <p className="text-red-400 text-xs mt-1">{errors.parentId}</p>}
               </div>
-
               <div>
-                <label className="text-sm font-medium text-gray-700">
-                  Харшил / онцлог мэдээлэл
-                  <span className="text-gray-400 font-normal ml-1">(заавал биш)</span>
-                </label>
-                <textarea
-                  value={form.healthInfo}
-                  onChange={e => setForm({ ...form, healthInfo: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1"
-                  rows={2}
-                  placeholder="Самрын харшилтай г.м"
-                />
+                <label className="text-xs font-medium text-gray-600">Харшил <span className="text-gray-300">(заавал биш)</span></label>
+                <textarea value={form.healthInfo} onChange={e => setForm({ ...form, healthInfo: e.target.value })}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-purple-400" rows={2} placeholder="Самрын харшилтай г.м" />
               </div>
             </div>
-
             <div className="flex gap-2 mt-4">
-              <button
-                onClick={() => setShowModal(false)}
-                className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm"
-              >
-                Болих
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
-              >
+              <button onClick={() => setShowModal(false)} className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm">Болих</button>
+              <button onClick={handleSubmit} disabled={loading} className="flex-1 bg-[#1E1B4B] text-white py-2.5 rounded-xl text-sm hover:bg-[#2d2a6e] disabled:opacity-50">
                 {loading ? 'Хадгалж байна...' : 'Хадгалах'}
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </DashboardLayout>
   )
 }
