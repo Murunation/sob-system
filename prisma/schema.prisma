@@ -63,12 +63,13 @@ model User {
   id         Int      @id @default(autoincrement())
   firstname  String
   lastname   String
-  phone      String?
+  phone      String?  @unique
   email      String   @unique
   username   String   @unique
   password   String   // bcrypt hash
   role       Role
-  isArchived Boolean  @default(false)
+  isArchived        Boolean  @default(false)
+  profileCompleted  Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -78,6 +79,8 @@ model User {
   parent     Parent?
   admin      Admin?
   notifications Notification[]
+
+  @@index([role])
 }
 
 // ==========================================
@@ -103,11 +106,14 @@ model Teacher {
   isArchived Boolean  @default(false)
   user       User     @relation(fields: [userId], references: [id])
 
-  group      Group?
-  reviews    Review[]
+  group       Group?
+  reviews     Review[]
   weeklyPlans WeeklyPlan[]
-  feedbacks  Feedback[]
+  feedbacks   Feedback[]
   attendances Attendance[]
+  qrTokens    QrToken[]
+
+  @@index([isArchived])
 }
 
 // ==========================================
@@ -178,6 +184,10 @@ model Student {
   mealLogs    MealLog[]
   reviews     Review[]
   payments    Payment[]
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([groupId])
+  @@index([parentId])
 }
 
 // ==========================================
@@ -197,6 +207,10 @@ model Attendance {
 
   student    Student          @relation(fields: [studentId], references: [id])
   teacher    Teacher?         @relation(fields: [teacherId], references: [id])
+
+  @@index([teacherId, date])
+  @@index([date])
+  @@index([studentId])
 }
 
 // ==========================================
@@ -217,6 +231,9 @@ model Meal {
 
   chef           Chef       @relation(fields: [chefId], references: [id])
   mealLogs       MealLog[]
+
+  @@index([date])
+  @@index([status, date(sort: Desc)])
 }
 
 // ==========================================
@@ -233,6 +250,8 @@ model MealLog {
 
   student   Student  @relation(fields: [studentId], references: [id])
   meal      Meal     @relation(fields: [mealId], references: [id])
+
+  @@index([mealId, studentId])
 }
 
 // ==========================================
@@ -250,6 +269,8 @@ model WeeklyPlan {
   updatedAt   DateTime @updatedAt
 
   teacher     Teacher  @relation(fields: [teacherId], references: [id])
+
+  @@index([teacherId, weekStart(sort: Desc)])
 }
 
 // ==========================================
@@ -270,6 +291,9 @@ model Review {
 
   student     Student      @relation(fields: [studentId], references: [id])
   teacher     Teacher      @relation(fields: [teacherId], references: [id])
+
+  @@index([studentId, status])
+  @@index([teacherId, createdAt(sort: Desc)])
 }
 
 // ==========================================
@@ -288,6 +312,8 @@ model Payment {
 
   student   Student  @relation(fields: [studentId], references: [id])
   parent    Parent   @relation(fields: [parentId], references: [id])
+
+  @@index([studentId])
 }
 
 // ==========================================
@@ -306,6 +332,9 @@ model Feedback {
 
   parent    Parent         @relation(fields: [parentId], references: [id])
   teacher   Teacher        @relation(fields: [teacherId], references: [id])
+
+  @@index([teacherId, createdAt(sort: Desc)])
+  @@index([parentId, createdAt(sort: Desc)])
 }
 
 // ==========================================
@@ -322,7 +351,28 @@ model Report {
   createdAt   DateTime     @default(now())
 
   admin       Admin        @relation(fields: [adminId], references: [id])
+
+  @@index([adminId, createdAt(sort: Desc)])
+  @@index([adminId, type])
 }
+// ==========================================
+// QR ИРЦИЙН TOKEN
+// ==========================================
+
+model QrToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  teacherId Int
+  date      DateTime
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  teacher   Teacher  @relation(fields: [teacherId], references: [id])
+
+  @@index([token])
+  @@index([teacherId, date])
+}
+
 model Notification {
   id        Int      @id @default(autoincrement())
   userId    Int
@@ -333,4 +383,7 @@ model Notification {
   createdAt DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt(sort: Desc)])
 }

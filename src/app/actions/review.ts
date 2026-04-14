@@ -1,28 +1,31 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { notifyParentNewReview } from '@/app/actions/notification'
+import {
+  findStudentReviews,
+  findTeacherReviews,
+  createReview as dbCreateReview,
+  updateReviewById,
+  findStudentWithParent,
+} from '@/services/review.service'
+import {
+  findTeacherByEmail,
+  findTeacherWithGroupStudents,
+} from '@/services/teacher.service'
 
 export async function getMyGroupStudentsForReview() {
   const session = await getServerSession(authOptions)
   if (!session) return []
 
-  const teacher = await prisma.teacher.findFirst({
-    where: { user: { email: session.user.email } },
-    include: { group: { include: { students: true } } }
-  })
-
+  const teacher = await findTeacherWithGroupStudents(session.user.email!)
   return teacher?.group?.students || []
 }
 
-export async function getStudentReviews(studentId: number) {
-  return await prisma.review.findMany({
-    where: { studentId },
-    orderBy: { createdAt: 'desc' }
-  })
+export async function getStudentReviews(studentId: number, page = 1, pageSize = 20) {
+  return findStudentReviews(studentId, page, pageSize)
 }
 
 export async function createReview(data: {
@@ -35,28 +38,20 @@ export async function createReview(data: {
   const session = await getServerSession(authOptions)
   if (!session) return
 
-  const teacher = await prisma.teacher.findFirst({
-    where: { user: { email: session.user.email } }
-  })
+  const teacher = await findTeacherByEmail(session.user.email!)
   if (!teacher) return
 
-  await prisma.review.create({
-    data: {
-      studentId: data.studentId,
-      teacherId: teacher.id,
-      behavior: data.behavior,
-      development: data.development,
-      note: data.note,
-      status: data.status,
-    }
+  await dbCreateReview({
+    studentId: data.studentId,
+    teacherId: teacher.id,
+    behavior: data.behavior,
+    development: data.development,
+    note: data.note,
+    status: data.status,
   })
 
-  // SENT бол ААХ-д notification явуулах
   if (data.status === 'SENT') {
-    const student = await prisma.student.findUnique({
-      where: { id: data.studentId },
-      include: { parent: { include: { user: true } } }
-    })
+    const student = await findStudentWithParent(data.studentId)
     if (student?.parent) {
       await notifyParentNewReview(
         student.parent.userId,
@@ -74,21 +69,8 @@ export async function updateReview(id: number, data: {
   note: string
   status: 'DRAFT' | 'SENT'
 }) {
-  const review = await prisma.review.update({
-    where: { id },
-    data: {
-      behavior: data.behavior,
-      development: data.development,
-      note: data.note,
-      status: data.status,
-      updatedAt: new Date(),
-    },
-    include: {
-      student: { include: { parent: { include: { user: true } } } }
-    }
-  })
+  const review = await updateReviewById(id, data)
 
-  // SENT бол ААХ-д notification явуулах
   if (data.status === 'SENT' && review.student?.parent) {
     await notifyParentNewReview(
       review.student.parent.userId,
@@ -99,18 +81,12 @@ export async function updateReview(id: number, data: {
   revalidatePath('/teacher/reviews')
 }
 
-export async function getMyReviews() {
+export async function getMyReviews(page = 1, pageSize = 20) {
   const session = await getServerSession(authOptions)
   if (!session) return []
 
-  const teacher = await prisma.teacher.findFirst({
-    where: { user: { email: session.user.email } }
-  })
+  const teacher = await findTeacherByEmail(session.user.email!)
   if (!teacher) return []
 
-  return await prisma.review.findMany({
-    where: { teacherId: teacher.id },
-    include: { student: true },
-    orderBy: { createdAt: 'desc' }
-  })
+  return findTeacherReviews(teacher.id, page, pageSize)
 }

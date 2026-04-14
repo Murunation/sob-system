@@ -1,101 +1,171 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import DemoForm from "../components/ui/DemoForm"; // 👈 ADD THIS
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.12 },
+  },
+};
+
+const item = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6 } },
+};
+
+export default function HomePage() {
+  const router = useRouter();
+
+  // ===== MODAL STATE =====
+  const [openDemo, setOpenDemo] = useState(false);
+
+  // ===== SECTIONS =====
+  const whatRef = useRef<HTMLDivElement | null>(null);
+  const whyRef = useRef<HTMLDivElement | null>(null);
+  const serviceRef = useRef<HTMLDivElement | null>(null);
+  const tourRef = useRef<HTMLDivElement | null>(null);
+  const priceRef = useRef<HTMLDivElement | null>(null);
+  const aboutRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollTo = (ref: any) => {
+    ref.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <main className="bg-[#f7f8fc] text-gray-900 relative overflow-hidden">
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* BACKGROUND */}
+      <motion.div
+        animate={{ y: [0, -20, 0], x: [0, 10, 0] }}
+        transition={{ repeat: Infinity, duration: 12 }}
+        className="absolute top-[-200px] left-[-200px] w-[500px] h-[500px] bg-[#6B4EFF]/20 blur-[140px] rounded-full"
+      />
+
+      <motion.div
+        animate={{ y: [0, 20, 0], x: [0, -10, 0] }}
+        transition={{ repeat: Infinity, duration: 15 }}
+        className="absolute bottom-[-200px] right-[-200px] w-[500px] h-[500px] bg-indigo-200/30 blur-[140px] rounded-full"
+      />
+
+      {/* NAVBAR */}
+      <header className="fixed top-0 left-0 w-full bg-white/60 backdrop-blur border-b z-50">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+
+          <h1 className="font-semibold text-lg">
+            <span className="text-[#6B4EFF]">SOB System</span>
+          </h1>
+
+          <nav className="hidden md:flex gap-6 text-sm text-gray-600">
+            <button onClick={() => scrollTo(whatRef)}>СӨБ гэж юу вэ?</button>
+            <button onClick={() => scrollTo(whyRef)}>Яагаад СӨБ?</button>
+            <button onClick={() => scrollTo(serviceRef)}>Үйлчилгээ</button>
+            <button onClick={() => scrollTo(tourRef)}>Заавар</button>
+            <button onClick={() => scrollTo(priceRef)}>Үнэ</button>
+            <button onClick={() => scrollTo(aboutRef)}>Бидний тухай</button>
+          </nav>
+
+          <div className="flex gap-3">
+            {/* 🔥 DEMO BUTTON OPENS MODAL */}
+            <button
+              onClick={() => setOpenDemo(true)}
+              className="px-4 py-2 border rounded-xl text-sm hover:bg-gray-100"
+            >
+              Туршиж үзэх
+            </button>
+
+            <button
+              onClick={() => router.push("/login")}
+              className="px-4 py-2 bg-[#6B4EFF] text-white rounded-xl text-sm"
+            >
+              Нэвтрэх
+            </button>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+      </header>
+
+      {/* HERO */}
+      <section className="pt-32 pb-24 max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+
+        <motion.div initial="hidden" animate="show" variants={container}>
+
+          <motion.h1 variants={item} className="text-5xl font-semibold">
+            Ухаалаг <span className="text-[#6B4EFF]">цэцэрлэгийн систем</span>
+          </motion.h1>
+
+          <motion.p variants={item} className="mt-6 text-gray-600 text-lg">
+            QR ирц, харилцаа, төлбөр, тайлан — бүгд нэг системд.
+          </motion.p>
+
+          <motion.div variants={item} className="mt-8 flex gap-4">
+            <button
+              onClick={() => setOpenDemo(true)}
+              className="px-6 py-3 bg-[#6B4EFF] text-white rounded-xl"
+            >
+              Туршиж үзэх
+            </button>
+
+            <button
+              onClick={() => router.push("/login")}
+              className="px-6 py-3 border rounded-xl"
+            >
+              Нэвтрэх
+            </button>
+          </motion.div>
+        </motion.div>
+
+        <motion.div
+  className="h-[400px] md:h-[700px] flex items-center justify-center px-4"
+  initial={{ opacity: 0, scale: 0.9 }}
+  animate={{ opacity: 1, scale: 1 }}
+>
+  <img
+    src="/admin-main-mockups.png"
+    alt="App Preview"
+    className="h-full w-auto object-cover"
+  />
+</motion.div>
+      </section>
+
+      {/* SECTIONS (unchanged) */}
+      <section ref={whatRef} className="py-24 max-w-5xl mx-auto px-6">
+        <h2 className="text-3xl font-semibold">What is SOB System?</h2>
+      </section>
+
+      <section ref={whyRef} className="bg-white py-24">
+        <div className="max-w-5xl mx-auto px-6">
+          <h2 className="text-3xl font-semibold">Why choose us?</h2>
+        </div>
+      </section>
+
+      <section ref={serviceRef} className="py-24 max-w-5xl mx-auto px-6">
+        <h2 className="text-3xl font-semibold">Services</h2>
+      </section>
+
+      <section ref={tourRef} className="bg-gray-50 py-24 text-center">
+        <h2 className="text-3xl font-semibold">Product Tour</h2>
+      </section>
+
+      <section ref={priceRef} className="py-24 max-w-5xl mx-auto px-6">
+        <h2 className="text-3xl font-semibold text-center">Pricing</h2>
+      </section>
+
+      <section ref={aboutRef} className="bg-gray-50 py-24 text-center">
+        <h2 className="text-3xl font-semibold">About us</h2>
+      </section>
+
+      {/* ===== MODAL ===== */}
+      {openDemo && (
+        <DemoForm onClose={() => setOpenDemo(false)} />
+      )}
+
+      <footer className="py-10 text-center text-gray-500 text-sm">
+        © 2026 SOB System
       </footer>
-    </div>
+    </main>
   );
 }

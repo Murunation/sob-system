@@ -1,96 +1,74 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
+import {
+  findStudents,
+  findArchivedStudents,
+  createStudent as dbCreateStudent,
+  updateStudent as dbUpdateStudent,
+  setStudentStatus,
+} from '@/services/student.service'
 
-// Бүх хүүхэд авах
-export async function getStudents() {
-  return await prisma.student.findMany({
-    where: { status: 'ACTIVE' },
-    include: {
-      group: true,
-      parent: {
-        include: { user: true }
-      }
-    },
-    orderBy: { createdAt: 'desc' }
-  })
-}
+export const getStudents = unstable_cache(
+  (page = 1, pageSize = 50) => findStudents(page, pageSize),
+  ['students-active'],
+  { tags: ['students'], revalidate: 60 }
+)
 
-// Архивласан хүүхэд авах
-export async function getArchivedStudents() {
-  return await prisma.student.findMany({
-    where: { status: 'ARCHIVED' },
-    include: {
-      group: true,
-      parent: {
-        include: { user: true }
-      }
-    },
-    orderBy: { createdAt: 'desc' }
-  })
-}
+export const getArchivedStudents = unstable_cache(
+  (page = 1, pageSize = 50) => findArchivedStudents(page, pageSize),
+  ['students-archived'],
+  { tags: ['students'], revalidate: 60 }
+)
 
-// Хүүхэд нэмэх
 export async function createStudent(data: {
   firstname: string
   lastname: string
   birthDate: string
   groupId: number
-  parentId: number
   healthInfo?: string
 }) {
-  await prisma.student.create({
-    data: {
-      firstname: data.firstname,
-      lastname: data.lastname,
-      birthDate: new Date(data.birthDate),
-      groupId: data.groupId,
-      parentId: data.parentId,
-      healthInfo: data.healthInfo || null,
-      status: 'ACTIVE'
-    }
+  await dbCreateStudent({
+    firstname: data.firstname,
+    lastname: data.lastname,
+    birthDate: new Date(data.birthDate),
+    groupId: data.groupId,
+    healthInfo: data.healthInfo || null,
   })
+  revalidateTag('students')
   revalidatePath('/admin/students')
+  revalidatePath('/teacher/students')
 }
 
-// Хүүхэд засах
 export async function updateStudent(id: number, data: {
   firstname: string
   lastname: string
   birthDate: string
   groupId: number
-  parentId: number
   healthInfo?: string
 }) {
-  await prisma.student.update({
-    where: { id },
-    data: {
-      firstname: data.firstname,
-      lastname: data.lastname,
-      birthDate: new Date(data.birthDate),
-      groupId: data.groupId,
-      parentId: data.parentId,
-      healthInfo: data.healthInfo || null,
-    }
+  await dbUpdateStudent(id, {
+    firstname: data.firstname,
+    lastname: data.lastname,
+    birthDate: new Date(data.birthDate),
+    groupId: data.groupId,
+    healthInfo: data.healthInfo || null,
   })
+  revalidateTag('students')
   revalidatePath('/admin/students')
+  revalidatePath('/teacher/students')
 }
 
-// Хүүхэд архивлах
 export async function archiveStudent(id: number) {
-  await prisma.student.update({
-    where: { id },
-    data: { status: 'ARCHIVED' }
-  })
+  await setStudentStatus(id, 'ARCHIVED')
+  revalidateTag('students')
   revalidatePath('/admin/students')
+  revalidatePath('/teacher/students')
 }
 
-// Хүүхэд сэргээх
 export async function restoreStudent(id: number) {
-  await prisma.student.update({
-    where: { id },
-    data: { status: 'ACTIVE' }
-  })
+  await setStudentStatus(id, 'ACTIVE')
+  revalidateTag('students')
   revalidatePath('/admin/students')
+  revalidatePath('/teacher/students')
 }

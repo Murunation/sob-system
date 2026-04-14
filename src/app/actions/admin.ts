@@ -1,50 +1,47 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { notifyReportStatus } from '@/app/actions/notification'
+import {
+  findAllAttendanceByDate,
+  updateAttendanceById,
+} from '@/services/attendance.service'
+import { findAllFeedbacks, updateFeedbackStatus } from '@/services/feedback.service'
+import { findFirstAdmin, findReports, updateReportStatus } from '@/services/report.service'
+import { findUsersByRoles } from '@/services/admin.service'
 
 // ==========================================
 // ТАЙЛАН
 // ==========================================
 
-export async function getAdminReports() {
-  return await prisma.report.findMany({
-    orderBy: { createdAt: 'desc' }
-  })
+export async function getAdminReports(page = 1, pageSize = 20) {
+  const admin = await findFirstAdmin()
+  if (!admin) return []
+  return findReports(admin.id, undefined, page, pageSize)
 }
 
 export async function confirmReport(id: number) {
-  const report = await prisma.report.update({
-    where: { id },
-    data: { status: 'CONFIRMED' }
-  })
+  const [report, users] = await Promise.all([
+    updateReportStatus(id, 'CONFIRMED'),
+    findUsersByRoles(['TEACHER', 'CHEF']),
+  ])
 
-  // Тайлан илгээсэн хэрэглэгчид мэдэгдэх
-  // Багш эсвэл тогооч олох
-  const users = await prisma.user.findMany({
-    where: { role: { in: ['TEACHER', 'CHEF'] } }
-  })
-  for (const user of users) {
-    await notifyReportStatus(user.id, report.type, 'CONFIRMED')
-  }
+  await Promise.all(
+    users.map((user) => notifyReportStatus(user.id, report.type, 'CONFIRMED'))
+  )
 
   revalidatePath('/admin/reports')
 }
 
 export async function returnReport(id: number) {
-  const report = await prisma.report.update({
-    where: { id },
-    data: { status: 'RETURNED' }
-  })
+  const [report, users] = await Promise.all([
+    updateReportStatus(id, 'RETURNED'),
+    findUsersByRoles(['TEACHER', 'CHEF']),
+  ])
 
-  // Тайлан илгээсэн хэрэглэгчид мэдэгдэх
-  const users = await prisma.user.findMany({
-    where: { role: { in: ['TEACHER', 'CHEF'] } }
-  })
-  for (const user of users) {
-    await notifyReportStatus(user.id, report.type, 'RETURNED')
-  }
+  await Promise.all(
+    users.map((user) => notifyReportStatus(user.id, report.type, 'RETURNED'))
+  )
 
   revalidatePath('/admin/reports')
 }
@@ -53,21 +50,12 @@ export async function returnReport(id: number) {
 // САНАЛ ХҮСЭЛТ
 // ==========================================
 
-export async function getAdminFeedbacks() {
-  return await prisma.feedback.findMany({
-    include: {
-      parent: { include: { user: true } },
-      teacher: { include: { user: true } },
-    },
-    orderBy: { createdAt: 'desc' }
-  })
+export async function getAdminFeedbacks(page = 1, pageSize = 20) {
+  return findAllFeedbacks(page, pageSize)
 }
 
 export async function resolveFeedback(id: number) {
-  await prisma.feedback.update({
-    where: { id },
-    data: { status: 'RESOLVED' }
-  })
+  await updateFeedbackStatus(id, 'RESOLVED')
   revalidatePath('/admin/feedback')
 }
 
@@ -76,30 +64,17 @@ export async function resolveFeedback(id: number) {
 // ==========================================
 
 export async function getAllAttendanceByDate(date: string) {
-  return await prisma.attendance.findMany({
-    where: {
-      date: {
-        gte: new Date(date + 'T00:00:00.000Z'),
-        lte: new Date(date + 'T23:59:59.999Z'),
-      }
-    },
-    include: { student: true },
-    orderBy: { student: { firstname: 'asc' } }
-  })
+  return findAllAttendanceByDate(date)
 }
 
 export async function adminUpdateAttendance(id: number, data: {
   status: 'PRESENT' | 'ABSENT' | 'SICK' | 'EXCUSED'
   note?: string
 }) {
-  await prisma.attendance.update({
-    where: { id },
-    data: {
-      status: data.status,
-      note: data.note || null,
-      editedBy: 'ADMIN',
-      editedAt: new Date(),
-    }
+  await updateAttendanceById(id, {
+    status: data.status,
+    note: data.note || null,
+    editedBy: 'ADMIN',
   })
   revalidatePath('/admin/attendance')
 }

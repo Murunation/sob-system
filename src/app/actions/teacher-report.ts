@@ -1,22 +1,19 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { notifyAdminNewReport, notifyReportStatus } from '@/app/actions/notification'
+import { notifyAdminNewReport } from '@/app/actions/notification'
+import { findFirstAdmin, findReports, createReport as dbCreateReport } from '@/services/report.service'
 
-export async function getMyReports() {
+export async function getMyReports(page = 1, pageSize = 20) {
   const session = await getServerSession(authOptions)
   if (!session) return []
 
-  const admin = await prisma.admin.findFirst()
+  const admin = await findFirstAdmin()
   if (!admin) return []
 
-  return await prisma.report.findMany({
-    where: { adminId: admin.id },
-    orderBy: { createdAt: 'desc' }
-  })
+  return findReports(admin.id, undefined, page, pageSize)
 }
 
 export async function createReport(data: {
@@ -26,22 +23,15 @@ export async function createReport(data: {
   const session = await getServerSession(authOptions)
   if (!session) return
 
-  const admin = await prisma.admin.findFirst({
-    include: { user: true }
-  })
+  const admin = await findFirstAdmin()
   if (!admin) return
 
-  await prisma.report.create({
-    data: {
-      adminId: admin.id,
-      type: data.type,
-      dateRange: data.dateRange,
-      status: 'SENT',
-    }
+  await dbCreateReport({
+    adminId: admin.id,
+    type: data.type,
+    dateRange: data.dateRange,
   })
 
-  // Admin-д notification явуулах
   await notifyAdminNewReport(admin.userId, `Багш: ${data.type}`)
-
   revalidatePath('/teacher/reports')
 }

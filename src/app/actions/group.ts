@@ -1,15 +1,18 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
+import {
+  findGroups,
+  createGroup as dbCreateGroup,
+  updateGroup as dbUpdateGroup,
+  archiveGroup as dbArchiveGroup,
+} from '@/services/group.service'
 
-export async function getGroups() {
-  return await prisma.group.findMany({
-    where: { isArchived: false },
-    include: { teacher: { include: { user: true } } },
-    orderBy: { name: 'asc' }
-  })
-}
+export const getGroups = unstable_cache(
+  () => findGroups(),
+  ['groups'],
+  { tags: ['groups'], revalidate: 300 }
+)
 
 export async function createGroup(data: {
   name: string
@@ -17,7 +20,8 @@ export async function createGroup(data: {
   capacity: number
   teacherId?: number
 }) {
-  await prisma.group.create({ data })
+  await dbCreateGroup(data)
+  revalidateTag('groups')
   revalidatePath('/admin/groups')
 }
 
@@ -27,14 +31,13 @@ export async function updateGroup(id: number, data: {
   capacity: number
   teacherId?: number
 }) {
-  await prisma.group.update({ where: { id }, data })
+  await dbUpdateGroup(id, data)
+  revalidateTag('groups')
   revalidatePath('/admin/groups')
 }
 
 export async function archiveGroup(id: number) {
-  await prisma.group.update({
-    where: { id },
-    data: { isArchived: true }
-  })
+  await dbArchiveGroup(id)
+  revalidateTag('groups')
   revalidatePath('/admin/groups')
 }

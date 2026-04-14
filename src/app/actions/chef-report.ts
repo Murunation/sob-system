@@ -1,42 +1,31 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { notifyAdminNewReport } from '@/app/actions/notification'
+import { findFirstAdmin, findReports, createReport as dbCreateReport } from '@/services/report.service'
 
-export async function getChefReports() {
-  const admin = await prisma.admin.findFirst()
+const CHEF_REPORT_TYPES = ['Өдрийн хоолны тайлан', 'Сарын хоолны тайлан', 'Хоолны нэгдсэн тайлан']
+
+export async function getChefReports(page = 1, pageSize = 20) {
+  const admin = await findFirstAdmin()
   if (!admin) return []
 
-  return await prisma.report.findMany({
-    where: {
-      adminId: admin.id,
-      type: { in: ['Өдрийн хоолны тайлан', 'Сарын хоолны тайлан', 'Хоолны нэгдсэн тайлан'] }
-    },
-    orderBy: { createdAt: 'desc' }
-  })
+  return findReports(admin.id, CHEF_REPORT_TYPES, page, pageSize)
 }
 
 export async function createChefReport(data: {
   type: string
   dateRange: string
 }) {
-  const admin = await prisma.admin.findFirst({
-    include: { user: true }
-  })
+  const admin = await findFirstAdmin()
   if (!admin) return
 
-  await prisma.report.create({
-    data: {
-      adminId: admin.id,
-      type: data.type,
-      dateRange: data.dateRange,
-      status: 'SENT',
-    }
+  await dbCreateReport({
+    adminId: admin.id,
+    type: data.type,
+    dateRange: data.dateRange,
   })
 
-  // Admin-д notification явуулах
   await notifyAdminNewReport(admin.userId, `Тогооч: ${data.type}`)
-
   revalidatePath('/chef/reports')
 }

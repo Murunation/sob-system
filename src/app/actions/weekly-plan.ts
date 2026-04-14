@@ -1,24 +1,25 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { notifyParentNewWeeklyPlan } from '@/app/actions/notification'
+import {
+  findWeeklyPlans,
+  findWeeklyPlanByWeek,
+  createWeeklyPlan as dbCreateWeeklyPlan,
+  updateWeeklyPlan as dbUpdateWeeklyPlan,
+} from '@/services/weekly-plan.service'
+import { findTeacherByEmail, findTeacherWithGroupStudents } from '@/services/teacher.service'
 
-export async function getMyWeeklyPlans() {
+export async function getMyWeeklyPlans(page = 1, pageSize = 10) {
   const session = await getServerSession(authOptions)
   if (!session) return []
 
-  const teacher = await prisma.teacher.findFirst({
-    where: { user: { email: session.user.email } }
-  })
+  const teacher = await findTeacherByEmail(session.user.email!)
   if (!teacher) return []
 
-  return await prisma.weeklyPlan.findMany({
-    where: { teacherId: teacher.id },
-    orderBy: { weekStart: 'desc' }
-  })
+  return findWeeklyPlans(teacher.id, page, pageSize)
 }
 
 export async function createWeeklyPlan(data: {
@@ -29,43 +30,28 @@ export async function createWeeklyPlan(data: {
   const session = await getServerSession(authOptions)
   if (!session) return
 
-  const teacher = await prisma.teacher.findFirst({
-    where: { user: { email: session.user.email } },
-    include: {
-      user: true,
-      group: {
-        include: {
-          students: {
-            include: { parent: { include: { user: true } } }
-          }
-        }
-      }
-    }
-  })
-  if (!teacher) return
+  const weekStartDate = new Date(data.weekStart + 'T00:00:00.000Z')
 
-  const existing = await prisma.weeklyPlan.findFirst({
-    where: {
-      teacherId: teacher.id,
-      weekStart: new Date(data.weekStart + 'T00:00:00.000Z')
-    }
-  })
+  const [teacher, existing] = await Promise.all([
+    findTeacherWithGroupStudents(session.user.email!),
+    findTeacherByEmail(session.user.email!).then((t) =>
+      t ? findWeeklyPlanByWeek(t.id, weekStartDate) : null
+    ),
+  ])
+  if (!teacher) return
   if (existing) throw new Error('Энэ долоо хоногт төлөвлөгөө аль хэдийн байна')
 
-  await prisma.weeklyPlan.create({
-    data: {
-      teacherId: teacher.id,
-      weekStart: new Date(data.weekStart + 'T00:00:00.000Z'),
-      content: data.content,
-      monthlyEvent: data.monthlyEvent || null,
-    }
+  await dbCreateWeeklyPlan({
+    teacherId: teacher.id,
+    weekStart: weekStartDate,
+    content: data.content,
+    monthlyEvent: data.monthlyEvent || null,
   })
 
-  // Бүлгийн бүх ААХ-д notification явуулах
   if (teacher.group?.students) {
     const parentUserIds = teacher.group.students
-      .filter(s => s.parent)
-      .map(s => s.parent!.userId)
+      .filter((s) => s.parent)
+      .map((s) => s.parent!.userId)
 
     const teacherName = `${teacher.user.lastname} ${teacher.user.firstname}`
     await notifyParentNewWeeklyPlan(parentUserIds, teacherName)
@@ -78,13 +64,9 @@ export async function updateWeeklyPlan(id: number, data: {
   content: string
   monthlyEvent?: string
 }) {
-  await prisma.weeklyPlan.update({
-    where: { id },
-    data: {
-      content: data.content,
-      monthlyEvent: data.monthlyEvent || null,
-      updatedAt: new Date(),
-    }
+  await dbUpdateWeeklyPlan(id, {
+    content: data.content,
+    monthlyEvent: data.monthlyEvent || null,
   })
   revalidatePath('/teacher/weekly-plan')
 }

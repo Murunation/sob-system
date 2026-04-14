@@ -16,8 +16,15 @@ export default withAuth(
     if (pathname.startsWith('/chef') && token?.role !== 'CHEF') {
       return NextResponse.redirect(new URL('/login', req.url))
     }
-    if (pathname.startsWith('/parent') && token?.role !== 'PARENT') {
-      return NextResponse.redirect(new URL('/login', req.url))
+
+    // Parent: профайл дүүрээгүй бол setup хуудас руу
+    if (pathname.startsWith('/parent')) {
+      if (token?.role !== 'PARENT') {
+        return NextResponse.redirect(new URL('/login', req.url))
+      }
+      if (!pathname.startsWith('/parent/setup') && token?.profileCompleted === false) {
+        return NextResponse.redirect(new URL('/parent/setup', req.url))
+      }
     }
 
     return NextResponse.next()
@@ -30,5 +37,5 @@ export default withAuth(
 )
 
 export const config = {
-  matcher: ['/admin/:path*', '/teacher/:path*', '/chef/:path*', '/parent/:path*'],
+  matcher: ['/admin/:path*', '/teacher/:path*', '/chef/:path*', '/parent/:path*', '/scan'],
 }
