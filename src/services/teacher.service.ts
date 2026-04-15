@@ -49,6 +49,7 @@ export async function findTeacherWithGroupStudents(email: string) {
         select: {
           id: true,
           students: {
+            where: { status: 'ACTIVE' },
             select: {
               id: true,
               firstname: true,

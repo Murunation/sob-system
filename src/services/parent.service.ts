@@ -52,6 +52,7 @@ export async function findParentWithStudents(email: string) {
       userId: true,
       user: { select: { id: true, firstname: true, lastname: true } },
       students: {
+        where: { status: 'ACTIVE' },
         select: {
           id: true,
           firstname: true,

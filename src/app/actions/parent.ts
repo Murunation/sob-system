@@ -258,6 +258,7 @@ export async function getParentDashboardStats() {
         select: { firstname: true, lastname: true, phone: true, email: true },
       },
       students: {
+        where: { status: 'ACTIVE' },
         select: {
           id: true,
           firstname: true,
