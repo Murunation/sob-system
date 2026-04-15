@@ -1,19 +1,17 @@
 'use server'
 
 import { getServerSession } from 'next-auth'
+import { unstable_cache } from 'next/cache'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-export async function getChefDashboardStats() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.email) return null
-
+async function fetchChefDashboardStats(email: string) {
   const today = new Date()
   const todayStart = new Date(today); todayStart.setHours(0, 0, 0, 0)
   const todayEnd   = new Date(today); todayEnd.setHours(23, 59, 59, 999)
 
   const chef = await prisma.chef.findFirst({
-    where: { user: { email: session.user.email } },
+    where: { user: { email } },
     select: {
       id: true,
       user: {
@@ -67,4 +65,16 @@ export async function getChefDashboardStats() {
     totalStudents,
     weekMeals,
   }
+}
+
+export async function getChefDashboardStats() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.email) return null
+
+  const email = session.user.email
+  return unstable_cache(
+    () => fetchChefDashboardStats(email),
+    ['chef-dashboard', email],
+    { revalidate: 30, tags: ['chef-dashboard'] }
+  )()
 }

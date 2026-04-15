@@ -1,6 +1,7 @@
 'use server'
 
 import { getServerSession } from 'next-auth'
+import { unstable_cache } from 'next/cache'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
@@ -12,14 +13,11 @@ function dayBounds(offsetFromToday = 0) {
   return { start, end, date: d }
 }
 
-export async function getTeacherDashboardStats() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.email) return null
-
+async function fetchTeacherDashboardStats(email: string) {
   const { start: todayStart, end: todayEnd } = dayBounds(0)
 
   const teacher = await prisma.teacher.findFirst({
-    where: { user: { email: session.user.email } },
+    where: { user: { email } },
     select: {
       id: true,
       profession: true,
@@ -131,4 +129,16 @@ export async function getTeacherDashboardStats() {
       todayStatus: s.attendances[0]?.status ?? null,
     })),
   }
+}
+
+export async function getTeacherDashboardStats() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.email) return null
+
+  const email = session.user.email
+  return unstable_cache(
+    () => fetchTeacherDashboardStats(email),
+    ['teacher-dashboard', email],
+    { revalidate: 30, tags: ['teacher-dashboard'] }
+  )()
 }

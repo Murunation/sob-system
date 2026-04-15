@@ -242,10 +242,7 @@ export async function archiveParentById(parentId: number) {
 
 // ── Parent: first-login profile completion ────────────────────────────────────
 
-export async function getParentDashboardStats() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.email) return null
-
+async function fetchParentDashboardStats(email: string) {
   const today = new Date()
   const sevenDaysAgo = new Date(today)
   sevenDaysAgo.setDate(today.getDate() - 6)
@@ -254,7 +251,7 @@ export async function getParentDashboardStats() {
   const todayStr = today.toISOString().split('T')[0]
 
   const parent = await prisma.parent.findFirst({
-    where: { user: { email: session.user.email } },
+    where: { user: { email } },
     select: {
       id: true,
       user: {
@@ -352,6 +349,18 @@ export async function getParentDashboardStats() {
     },
     children,
   }
+}
+
+export async function getParentDashboardStats() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.email) return null
+
+  const email = session.user.email
+  return unstable_cache(
+    () => fetchParentDashboardStats(email),
+    ['parent-dashboard', email],
+    { revalidate: 30, tags: ['parent-dashboard'] }
+  )()
 }
 
 export async function completeProfile(data: { email: string; address?: string }) {
