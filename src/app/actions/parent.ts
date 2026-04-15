@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { hash } from 'bcryptjs'
+import { prisma } from '@/lib/prisma'
 import { notifyTeacherNewFeedback, notifyAdminNewFeedback } from '@/app/actions/notification'
 import {
   findParentWithStudents,
@@ -237,6 +238,117 @@ export async function archiveParentById(parentId: number) {
 }
 
 // ── Parent: first-login profile completion ────────────────────────────────────
+
+export async function getParentDashboardStats() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.email) return null
+
+  const today = new Date()
+  const sevenDaysAgo = new Date(today)
+  sevenDaysAgo.setDate(today.getDate() - 6)
+  sevenDaysAgo.setHours(0, 0, 0, 0)
+  const todayEnd = new Date(today); todayEnd.setHours(23, 59, 59, 999)
+  const todayStr = today.toISOString().split('T')[0]
+
+  const parent = await prisma.parent.findFirst({
+    where: { user: { email: session.user.email } },
+    select: {
+      id: true,
+      user: {
+        select: { firstname: true, lastname: true, phone: true, email: true },
+      },
+      students: {
+        select: {
+          id: true,
+          firstname: true,
+          lastname: true,
+          birthDate: true,
+          healthInfo: true,
+          group: {
+            select: {
+              name: true,
+              ageRange: true,
+              teacher: {
+                select: {
+                  user: { select: { firstname: true, lastname: true } },
+                },
+              },
+            },
+          },
+          attendances: {
+            where: { date: { gte: sevenDaysAgo, lte: todayEnd } },
+            orderBy: { date: 'asc' },
+            select: { date: true, status: true },
+          },
+        },
+      },
+    },
+  })
+
+  if (!parent) return null
+
+  const children = parent.students.map(student => {
+    const totalDays = student.attendances.length
+    const presentDays = student.attendances.filter(a => a.status === 'PRESENT').length
+    const attendanceRate = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0
+
+    const todayAtt = student.attendances.find(a => {
+      const d = new Date(a.date)
+      return d.toISOString().split('T')[0] === todayStr
+    })
+
+    const chartData = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(sevenDaysAgo)
+      d.setDate(sevenDaysAgo.getDate() + i)
+      const dateStr = d.toISOString().split('T')[0]
+      const att = student.attendances.find(a => {
+        const ad = new Date(a.date)
+        return ad.toISOString().split('T')[0] === dateStr
+      })
+      return {
+        label: d.toLocaleDateString('mn-MN', { weekday: 'short' }),
+        date: dateStr,
+        status: att?.status ?? null,
+      }
+    })
+
+    const age = Math.floor(
+      (today.getTime() - new Date(student.birthDate).getTime()) / (365.25 * 24 * 3600 * 1000)
+    )
+
+    return {
+      id: student.id,
+      firstname: student.firstname,
+      lastname: student.lastname,
+      age,
+      healthInfo: student.healthInfo,
+      group: student.group
+        ? {
+            name: student.group.name,
+            ageRange: student.group.ageRange,
+            teacherName: student.group.teacher
+              ? `${student.group.teacher.user.lastname} ${student.group.teacher.user.firstname}`
+              : null,
+          }
+        : null,
+      presentDays,
+      totalDays,
+      attendanceRate,
+      todayStatus: todayAtt?.status ?? null,
+      chartData,
+    }
+  })
+
+  return {
+    parent: {
+      firstname: parent.user.firstname,
+      lastname: parent.user.lastname,
+      phone: parent.user.phone,
+      email: parent.user.email,
+    },
+    children,
+  }
+}
 
 export async function completeProfile(data: { email: string; address?: string }) {
   const session = await getServerSession(authOptions)
