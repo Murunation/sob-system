@@ -15,10 +15,26 @@ import { prisma } from '@/lib/prisma'
 const CHEF_REPORT_TYPES = ['Өдрийн хоолны тайлан', 'Сарын хоолны тайлан', 'Хоолны нэгдсэн тайлан']
 
 export async function getChefReports(page = 1, pageSize = 20) {
+  const session = await getServerSession(authOptions)
+  if (!session) return []
+
   const admin = await findFirstAdmin()
   if (!admin) return []
 
-  return findReports(admin.id, CHEF_REPORT_TYPES, page, pageSize)
+  const userId = Number((session.user as any).id)
+  const all = await findReports(admin.id, CHEF_REPORT_TYPES, 1, 1000)
+
+  const mine = all.filter((r) => {
+    if (!r.filePath) return false
+    try {
+      const params = JSON.parse(r.filePath)
+      return params.userId === userId
+    } catch {
+      return false
+    }
+  })
+
+  return mine.slice((page - 1) * pageSize, page * pageSize)
 }
 
 export async function createChefReport(data: {
