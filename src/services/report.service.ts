@@ -44,3 +44,25 @@ export async function updateReportStatus(id: number, status: 'CONFIRMED' | 'RETU
     select: { id: true, type: true, adminId: true },
   })
 }
+
+export async function updateReportFilePath(id: number, filePath: string) {
+  return prisma.report.update({
+    where: { id },
+    data: { filePath },
+    select: { id: true },
+  })
+}
+
+export async function findReportById(id: number) {
+  return prisma.report.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      type: true,
+      dateRange: true,
+      filePath: true,
+      status: true,
+      adminId: true,
+    },
+  })
+}

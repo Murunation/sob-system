@@ -10,6 +10,7 @@ type Report = {
   type: string;
   dateRange: string;
   status: string;
+  filePath: string | null;
   createdAt: string;
 };
 
@@ -78,9 +79,21 @@ export default function AdminReportsPage() {
                     <h3 className="font-semibold">{r.type}</h3>
                     <p className="text-sm text-gray-400">{r.dateRange}</p>
                   </div>
-                  <span className="text-xs text-gray-400">
-                    {new Date(r.createdAt).toLocaleDateString('mn-MN')}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-xs text-gray-400">
+                      {new Date(r.createdAt).toLocaleDateString('mn-MN')}
+                    </span>
+                    {r.filePath && (
+                      <a
+                        href={`/api/reports/download?id=${r.id}`}
+                        download
+                        className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition flex items-center gap-1"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Excel татах
+                      </a>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex gap-2">
@@ -121,16 +134,27 @@ export default function AdminReportsPage() {
                   <p className="text-sm text-gray-400">{r.dateRange}</p>
                 </div>
 
-                <div className="text-right">
+                <div className="text-right flex flex-col items-end gap-1">
                   <span
                     className={`text-xs px-2 py-1 rounded-full ${statusColor[r.status]}`}
                   >
                     {statusLabel[r.status]}
                   </span>
 
-                  <div className="text-xs text-gray-400 mt-1">
+                  <div className="text-xs text-gray-400">
                     {new Date(r.createdAt).toLocaleDateString('mn-MN')}
                   </div>
+
+                  {r.filePath && (
+                    <a
+                      href={`/api/reports/download?id=${r.id}`}
+                      download
+                      className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition flex items-center gap-1"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      Excel татах
+                    </a>
+                  )}
                 </div>
               </div>
             </div>

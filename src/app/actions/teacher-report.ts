@@ -4,7 +4,13 @@ import { revalidatePath } from 'next/cache'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { notifyAdminNewReport } from '@/app/actions/notification'
-import { findFirstAdmin, findReports, createReport as dbCreateReport } from '@/services/report.service'
+import {
+  findFirstAdmin,
+  findReports,
+  createReport as dbCreateReport,
+  updateReportFilePath,
+} from '@/services/report.service'
+import { prisma } from '@/lib/prisma'
 
 export async function getMyReports(page = 1, pageSize = 20) {
   const session = await getServerSession(authOptions)
@@ -26,12 +32,32 @@ export async function createReport(data: {
   const admin = await findFirstAdmin()
   if (!admin) return
 
-  await dbCreateReport({
+  const report = await dbCreateReport({
     adminId: admin.id,
     type: data.type,
     dateRange: data.dateRange,
   })
 
+  // Store generation params in filePath so admin can re-generate the Excel
+  const userId = Number((session.user as any).id)
+  const teacher = await prisma.teacher.findFirst({
+    where: { userId },
+    select: { id: true },
+  })
+
+  if (teacher) {
+    const params = JSON.stringify({
+      role: 'TEACHER',
+      userId,
+      teacherId: teacher.id,
+      type: data.type,
+      dateRange: data.dateRange,
+    })
+    await updateReportFilePath(report.id, params)
+  }
+
   await notifyAdminNewReport(admin.userId, `Багш: ${data.type}`)
   revalidatePath('/teacher/reports')
+
+  return report.id
 }
