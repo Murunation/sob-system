@@ -136,3 +136,10 @@ export async function archiveTeacherById(id: number) {
     data: { isArchived: true },
   })
 }
+
+export async function restoreTeacherById(id: number) {
+  return prisma.teacher.update({
+    where: { id },
+    data: { isArchived: false },
+  })
+}

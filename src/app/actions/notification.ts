@@ -113,3 +113,12 @@ export async function notifyAdminNewFeedback(adminUserId: number, parentName: st
     link: '/admin/feedback',
   })
 }
+
+export async function notifyParentPaymentReminder(parentUserId: number, studentName: string, monthLabel: string) {
+  await dbCreateNotification({
+    userId: parentUserId,
+    title: 'Төлбөрийн сануулга',
+    message: `${studentName}-ийн ${monthLabel}-ын төлбөр төлөгдөөгүй байна`,
+    link: '/parent/payment',
+  })
+}

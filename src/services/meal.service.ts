@@ -11,6 +11,12 @@ const mealSelect = {
   status: true,
   createdAt: true,
   updatedAt: true,
+  chef: {
+    select: {
+      id: true,
+      user: { select: { id: true, firstname: true, lastname: true } },
+    },
+  },
 } as const
 
 export async function findChefByEmail(email: string) {
