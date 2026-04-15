@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
+import { cache } from 'react'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { hash } from 'bcryptjs'
@@ -29,11 +30,12 @@ import { findWeeklyPlans } from '@/services/weekly-plan.service'
 import { createFeedback, findParentFeedbacks } from '@/services/feedback.service'
 import { findFirstAdmin } from '@/services/report.service'
 
-async function getMyParent() {
+// React cache() — нэг request дотор давтагдсан дуудлагыг dedup хийнэ
+const getMyParent = cache(async () => {
   const session = await getServerSession(authOptions)
   if (!session) return null
   return findParentWithStudents(session.user.email!)
-}
+})
 
 /** Эцэг эхийн бүх хүүхдийг буцаана */
 export async function getMyChildren() {
@@ -57,9 +59,9 @@ export async function getRecentMealsForParent() {
   return findConfirmedRecentMeals(7)
 }
 
-export async function getMyChildReviews(page = 1, pageSize = 20) {
+export async function getMyChildReviews(studentId?: number, page = 1, pageSize = 20) {
   const parent = await getMyParent()
-  const student = parent?.students[0]
+  const student = (studentId ? parent?.students.find((s) => s.id === studentId) : null) ?? parent?.students[0]
   if (!student) return { student: null, reviews: [] }
 
   const [reviews] = await Promise.all([
@@ -70,23 +72,24 @@ export async function getMyChildReviews(page = 1, pageSize = 20) {
   return { student, reviews }
 }
 
-export async function getMyChildWeeklyPlan(page = 1, pageSize = 4) {
+export async function getMyChildWeeklyPlan(studentId?: number, page = 1, pageSize = 4) {
   const parent = await getMyParent()
-  const student = parent?.students[0]
+  const student = (studentId ? parent?.students.find((s) => s.id === studentId) : null) ?? parent?.students[0]
   if (!student?.group?.teacher) return { student: null, plans: [] }
 
   const plans = await findWeeklyPlans(student.group.teacher.id, page, pageSize)
   return { student, plans }
 }
 
-export async function sendFeedback(data: { message: string }) {
+export async function sendFeedback(data: { message: string; studentId?: number }) {
   const session = await getServerSession(authOptions)
   if (!session) return
 
   const parent = await findParentWithStudents(session.user.email!)
   if (!parent) return
 
-  const teacher = parent.students[0]?.group?.teacher
+  const student = (data.studentId ? parent.students.find((s) => s.id === data.studentId) : null) ?? parent.students[0]
+  const teacher = student?.group?.teacher
   if (!teacher) throw new Error('Багш олдсонгүй')
 
   const [, admin] = await Promise.all([

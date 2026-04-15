@@ -67,26 +67,37 @@ export async function getTeacherDashboardStats() {
     totalStudents > 0 ? Math.round((presentToday / totalStudents) * 100) : 0
 
   const groupId = teacher.group?.id
-  const weeklyAttendance = groupId
-    ? await Promise.all(
-        Array.from({ length: 7 }, (_, i) => {
-          const { start, end, date } = dayBounds(6 - i)
-          return prisma.attendance
-            .count({
-              where: {
-                student: { groupId },
-                date: { gte: start, lte: end },
-                status: 'PRESENT',
-              },
-            })
-            .then(count => ({
-              label: date.toLocaleDateString('mn-MN', { weekday: 'short' }),
-              date: date.toISOString().split('T')[0],
-              count,
-            }))
-        })
-      )
-    : []
+  let weeklyAttendance: { label: string; date: string; count: number }[] = []
+
+  if (groupId) {
+    const { start: weekStart } = dayBounds(6)
+    const { end: todayEnd } = dayBounds(0)
+
+    const weeklyRecords = await prisma.attendance.findMany({
+      where: {
+        student: { groupId },
+        date: { gte: weekStart, lte: todayEnd },
+        status: 'PRESENT',
+      },
+      select: { date: true },
+    })
+
+    const countByDate = new Map<string, number>()
+    weeklyRecords.forEach((r) => {
+      const d = new Date(r.date).toISOString().split('T')[0]
+      countByDate.set(d, (countByDate.get(d) ?? 0) + 1)
+    })
+
+    weeklyAttendance = Array.from({ length: 7 }, (_, i) => {
+      const { date } = dayBounds(6 - i)
+      const dateStr = date.toISOString().split('T')[0]
+      return {
+        label: date.toLocaleDateString('mn-MN', { weekday: 'short' }),
+        date: dateStr,
+        count: countByDate.get(dateStr) ?? 0,
+      }
+    })
+  }
 
   return {
     teacher: {

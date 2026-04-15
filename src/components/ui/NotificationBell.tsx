@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { getMyNotifications, getUnreadCount, markAsRead, markAllAsRead } from '@/app/actions/notification'
+import { getMyNotifications, markAsRead, markAllAsRead } from '@/app/actions/notification'
 
 type Notification = {
   id: number
@@ -21,12 +21,9 @@ export default function NotificationBell() {
   const ref = useRef<HTMLDivElement>(null)
 
   async function loadData() {
-    const [notifs, count] = await Promise.all([
-      getMyNotifications(),
-      getUnreadCount(),
-    ])
+    const notifs = await getMyNotifications()
     setNotifications(notifs as any)
-    setUnreadCount(count as number)
+    setUnreadCount((notifs as any[]).filter((n) => !n.isRead).length)
   }
 
   useEffect(() => {

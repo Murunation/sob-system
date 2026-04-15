@@ -248,6 +248,75 @@ async function generateMonthlyExcel(
   return XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
 }
 
+async function generateMealLogExcel(
+  teacherId: number,
+  dateRange: string,
+): Promise<ArrayBuffer> {
+  const { start, end } = parseRange(dateRange)
+
+  // Get teacher's group students
+  const teacher = await prisma.teacher.findUnique({
+    where: { id: teacherId },
+    select: {
+      group: {
+        select: {
+          students: {
+            where: { status: 'ACTIVE' },
+            select: { id: true, firstname: true, lastname: true },
+          },
+        },
+      },
+    },
+  })
+
+  const studentIds = teacher?.group?.students.map((s) => s.id) ?? []
+  const studentMap = new Map(
+    (teacher?.group?.students ?? []).map((s) => [s.id, s])
+  )
+
+  const logs = await prisma.mealLog.findMany({
+    where: {
+      studentId: { in: studentIds },
+      createdAt: { gte: start, lte: end },
+    },
+    select: {
+      createdAt: true,
+      eaten: true,
+      note: true,
+      studentId: true,
+      meal: { select: { date: true, menu: true } },
+    },
+    orderBy: [{ meal: { date: 'asc' } }, { studentId: 'asc' }],
+  })
+
+  const rows = logs.map((l) => {
+    const s = studentMap.get(l.studentId)
+    return {
+      Огноо: new Date(l.meal.date).toLocaleDateString('mn-MN'),
+      Овог: s?.lastname ?? '',
+      Нэр: s?.firstname ?? '',
+      Цэс: l.meal.menu,
+      Идсэн: l.eaten ? 'Тийм' : 'Үгүй',
+      Тэмдэглэл: l.note ?? '',
+    }
+  })
+
+  const ws = XLSX.utils.json_to_sheet(rows)
+  ws['!cols'] = [
+    { wch: 12 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 25 },
+    { wch: 8 },
+    { wch: 20 },
+  ]
+
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Хоолны тайлан')
+
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
+}
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) {
@@ -296,8 +365,10 @@ export async function GET(req: NextRequest) {
         buffer = await generateAttendanceExcel(params.teacherId, dateRange, type)
       } else if (type === 'Хөгжлийн тайлан') {
         buffer = await generateDevelopmentExcel(params.teacherId, dateRange)
+      } else if (type === 'Хоолны тайлан') {
+        buffer = await generateMealLogExcel(params.teacherId, dateRange)
       } else {
-        // Monthly summary or any other teacher report
+        // Сарын нэгдсэн тайлан or any other teacher report
         buffer = await generateMonthlyExcel(params.teacherId, dateRange)
       }
     } else if (params.role === 'CHEF') {

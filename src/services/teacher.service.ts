@@ -54,6 +54,7 @@ export async function findTeacherWithGroupStudents(email: string) {
               id: true,
               firstname: true,
               lastname: true,
+              healthInfo: true,
               parentId: true,
               parent: {
                 select: {

@@ -4,16 +4,24 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import DashboardLayout from '@/components/ui/DashboardLayout'
 import { parentNavItems } from '@/app/parent/parent-nav'
-import { getMyFeedbacks, sendFeedback } from '@/app/actions/parent'
+import { getMyChildren, getMyFeedbacks, sendFeedback } from '@/app/actions/parent'
+
+type Child = { id: number; firstname: string; lastname: string; group: { name: string } | null }
 
 export default function ParentFeedbackPage() {
+  const [children, setChildren] = useState<Child[]>([])
   const [feedbacks, setFeedbacks] = useState<any[]>([])
   const [showModal, setShowModal] = useState(false)
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null)
   const [message, setMessage] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    getMyChildren().then((c) => {
+      setChildren(c as Child[])
+      if (c.length > 0) setSelectedStudentId(c[0].id)
+    })
     getMyFeedbacks().then((f) => setFeedbacks(f as any))
   }, [])
 
@@ -28,8 +36,6 @@ export default function ParentFeedbackPage() {
 
     if (!message.trim()) {
       newErrors.message = 'Санал хүсэлт оруулна уу'
-    } else if (!/^[А-ЯӨҮа-яөүA-Za-z\s.,!?()-]+$/.test(message.trim())) {
-      newErrors.message = 'Санал хүсэлт зөвхөн үсэг агуулна'
     } else if (message.trim().length < 5) {
       newErrors.message = 'Санал хүсэлт хэт богино байна'
     }
@@ -39,7 +45,7 @@ export default function ParentFeedbackPage() {
 
     setLoading(true)
     try {
-      await sendFeedback({ message })
+      await sendFeedback({ message, studentId: selectedStudentId ?? undefined })
       toast.success('Санал хүсэлт амжилттай илгээгдлээ')
       setShowModal(false)
       const f = await getMyFeedbacks()
@@ -99,6 +105,30 @@ export default function ParentFeedbackPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-5 sm:p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-bold mb-4 text-gray-800">Санал хүсэлт илгээх</h2>
+
+            {/* Child selector inside modal — only if multiple children */}
+            {children.length > 1 && (
+              <div className="mb-4">
+                <label className="text-xs font-medium text-gray-600">Хүүхэд сонгох</label>
+                <div className="flex gap-2 mt-1 flex-wrap">
+                  {children.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setSelectedStudentId(c.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
+                        selectedStudentId === c.id
+                          ? 'bg-[#1E1B4B] text-white border-[#1E1B4B]'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-[#1E1B4B]'
+                      }`}
+                    >
+                      {c.lastname} {c.firstname}
+                      {c.group && <span className="ml-1 text-gray-400 font-normal">({c.group.name})</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="text-xs font-medium text-gray-600">Санал хүсэлт</label>

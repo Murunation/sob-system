@@ -3,21 +3,52 @@
 import { useEffect, useState } from 'react'
 import DashboardLayout from '@/components/ui/DashboardLayout'
 import { parentNavItems } from '@/app/parent/parent-nav'
-import { getMyChildReviews } from '@/app/actions/parent'
+import { getMyChildren, getMyChildReviews } from '@/app/actions/parent'
+
+type Child = { id: number; firstname: string; lastname: string; group: { name: string } | null }
 
 export default function ParentReviewsPage() {
+  const [children, setChildren] = useState<Child[]>([])
+  const [selectedId, setSelectedId] = useState<number | null>(null)
   const [student, setStudent] = useState<any>(null)
   const [reviews, setReviews] = useState<any[]>([])
 
   useEffect(() => {
-    getMyChildReviews().then((d) => {
-      setStudent(d.student)
-      setReviews(d.reviews)
+    getMyChildren().then((c) => {
+      setChildren(c as Child[])
+      if (c.length > 0) setSelectedId(c[0].id)
     })
   }, [])
 
+  useEffect(() => {
+    if (!selectedId) return
+    getMyChildReviews(selectedId).then((d) => {
+      setStudent(d.student)
+      setReviews(d.reviews)
+    })
+  }, [selectedId])
+
   return (
     <DashboardLayout navItems={parentNavItems} role="Эцэг эх">
+      {/* Child selector */}
+      {children.length > 1 && (
+        <div className="flex gap-2 mb-4 flex-wrap">
+          {children.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => setSelectedId(c.id)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition border ${
+                selectedId === c.id
+                  ? 'bg-[#1E1B4B] text-white border-[#1E1B4B]'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-[#1E1B4B]'
+              }`}
+            >
+              {c.lastname} {c.firstname}
+            </button>
+          ))}
+        </div>
+      )}
+
       {student && (
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4">
           <p className="font-bold text-gray-800">

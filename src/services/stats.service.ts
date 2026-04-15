@@ -10,9 +10,10 @@ function dayBounds(offsetFromToday = 0) {
 
 export async function getDashboardStats() {
   const { start: todayStart, end: todayEnd } = dayBounds(0)
+  const { start: weekStart } = dayBounds(6)
 
-  // ── Core counts ────────────────────────────────────────────────────────────
-  const [studentCount, teacherCount, groupCount, parentCount, todayPresent] =
+  // ── Core counts + weekly attendance records — single batch ─────────────────
+  const [studentCount, teacherCount, groupCount, parentCount, todayPresent, weeklyRecords] =
     await Promise.all([
       prisma.student.count({ where: { status: 'ACTIVE' } }),
       prisma.teacher.count({ where: { isArchived: false } }),
@@ -21,21 +22,28 @@ export async function getDashboardStats() {
       prisma.attendance.count({
         where: { date: { gte: todayStart, lte: todayEnd }, status: 'PRESENT' },
       }),
+      // 1 query instead of 7
+      prisma.attendance.findMany({
+        where: { date: { gte: weekStart, lte: todayEnd }, status: 'PRESENT' },
+        select: { date: true },
+      }),
     ])
 
-  // ── 7-day attendance trend ─────────────────────────────────────────────────
-  const weeklyAttendance = await Promise.all(
-    Array.from({ length: 7 }, (_, i) => {
-      const { start, end, date } = dayBounds(6 - i)
-      return prisma.attendance
-        .count({ where: { date: { gte: start, lte: end }, status: 'PRESENT' } })
-        .then((count) => ({
-          label: date.toLocaleDateString('mn-MN', { weekday: 'short' }),
-          date: date.toISOString().split('T')[0],
-          count,
-        }))
-    })
-  )
+  // ── 7-day attendance trend — built in JS ───────────────────────────────────
+  const countByDate = new Map<string, number>()
+  weeklyRecords.forEach((r) => {
+    const d = new Date(r.date).toISOString().split('T')[0]
+    countByDate.set(d, (countByDate.get(d) ?? 0) + 1)
+  })
+  const weeklyAttendance = Array.from({ length: 7 }, (_, i) => {
+    const { date } = dayBounds(6 - i)
+    const dateStr = date.toISOString().split('T')[0]
+    return {
+      label: date.toLocaleDateString('mn-MN', { weekday: 'short' }),
+      date: dateStr,
+      count: countByDate.get(dateStr) ?? 0,
+    }
+  })
 
   // ── Group attendance today ─────────────────────────────────────────────────
   const groups = await prisma.group.findMany({
