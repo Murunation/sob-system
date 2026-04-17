@@ -343,14 +343,20 @@ export default function HomePage() {
 
       {/* 1 */}
       <div className="flex flex-col md:flex-row items-center gap-10">
-        <div className="flex-1">
-          <h3 className="text-2xl font-semibold">📱 QR Ирцийн систем</h3>
-          <p className="mt-3 text-gray-600">
-            Хүүхдийн ирцийг QR кодоор хурдан, автомат бүртгэнэ.
-          </p>
-        </div>
-        <div className="flex-1 h-[220px] md:h-[280px] bg-gradient-to-br from-[#6B4EFF]/10 to-indigo-100 rounded-3xl border" />
-      </div>
+  <div className="flex-1">
+    <h3 className="text-2xl font-semibold">📱 QR Ирцийн систем</h3>
+    <p className="mt-3 text-gray-600">
+      Хүүхдийн ирцийг QR кодоор хурдан, автомат бүртгэнэ.
+    </p>
+  </div>
+  <div className="flex-1 h-[220px] md:h-[280px] rounded-3xl border overflow-hidden">
+    <img
+      src="/qr-attandance.png"
+      alt="QR ирцийн систем"
+      className="w-full h-full object-cover"
+    />
+  </div>
+</div>
 
       {/* 2 (reverse) */}
       <div className="flex flex-col md:flex-row-reverse items-center gap-10">
@@ -360,7 +366,13 @@ export default function HomePage() {
             Багш болон эцэг эх хооронд шууд мэдээлэл солилцоно.
           </p>
         </div>
-        <div className="flex-1 h-[220px] md:h-[280px] bg-gradient-to-br from-indigo-100 to-purple-100 rounded-3xl border" />
+        <div className="flex-1 h-[220px] md:h-[280px] rounded-3xl border overflow-hidden">
+    <img
+      src="/conversation-parent.png"
+      alt="Эцэг эхийн харилцаа"
+      className="w-full h-full object-cover"
+    />
+  </div>
       </div>
 
       {/* 3 */}
@@ -371,7 +383,13 @@ export default function HomePage() {
             Хүүхэд бүрийн төлбөрийг тодорхой, ил тод хянах боломжтой.
           </p>
         </div>
-        <div className="flex-1 h-[220px] md:h-[280px] bg-gradient-to-br from-yellow-100 to-orange-100 rounded-3xl border" />
+        <div className="flex-1 h-[220px] md:h-[280px] rounded-3xl border overflow-hidden">
+    <img
+      src="/payment.png"
+      alt="Төлбөрийн удирдлага"
+      className="w-full h-full object-cover"
+    />
+  </div>
       </div>
 
       {/* 4 (reverse) */}
@@ -382,7 +400,13 @@ export default function HomePage() {
             Ирц, төлбөр, хөгжлийн ухаалаг тайлан харуулна.
           </p>
         </div>
-        <div className="flex-1 h-[220px] md:h-[280px] bg-gradient-to-br from-green-100 to-teal-100 rounded-3xl border" />
+        <div className="flex-1">
+          <img
+            src="/report.png"
+            alt="Тайлан, анализ"
+            className="w-full h-full object-cover"
+          />
+        </div>
       </div>
 
     </div>
@@ -411,7 +435,7 @@ export default function HomePage() {
         loop
         playsInline
       >
-        <source src="/tour.mp4" type="video/mp4" />
+        <source src="/Promo.mp4" type="video/mp4" />
       </video>
 
       {/* OVERLAY */}
