@@ -470,7 +470,7 @@ export default function HomePage() {
   </h2>
 
   <p className="mt-3 text-gray-600 text-sm md:text-base">
-    Сар, жил болон уян хатан багцаас сонгох боломжтой.
+    Сар, жил болон уян хатан багцаас сонгох боломжтой..
   </p>
 
   {/* 💖 SPECIAL SUPPORT BADGE */}
