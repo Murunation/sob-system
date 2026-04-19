@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { saveDemoRequest } from "@/app/actions/demo-request";
 
 const steps = ["role", "students", "locations", "started", "contact"];
 
@@ -32,9 +33,7 @@ export default function DemoForm({ onClose }: { onClose: () => void }) {
 
   const submit = async () => {
     try {
-      // backend call энд хийж болно
-      // await fetch("/api/demo", { method: "POST", body: JSON.stringify(data) });
-
+      await saveDemoRequest(data);
       setSubmitted(true);
     } catch (e) {
       console.log(e);

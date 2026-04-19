@@ -373,6 +373,24 @@ model QrToken {
   @@index([teacherId, date])
 }
 
+// ==========================================
+// DEMO ХҮСЭЛТ (нүүр хуудасны форм)
+// ==========================================
+
+model DemoRequest {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  phone     String
+  role      String?
+  students  String?
+  locations String?
+  started   String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+}
+
 model Notification {
   id        Int      @id @default(autoincrement())
   userId    Int
