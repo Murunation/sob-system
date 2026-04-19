@@ -49,6 +49,7 @@ export default function TeacherPickupPage() {
   const [loadingStudents, setLoadingStudents] = useState(true)
   const [confirming, setConfirming] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
+  const [showModal, setShowModal] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -118,15 +119,15 @@ export default function TeacherPickupPage() {
   }, [status, loadQR, loadStudents])
 
   const handleConfirm = async () => {
-    if (!confirm('Бүх хүүхдийг хүлээлгэж өгснийг баталгаажуулах уу? Admin-д мэдэгдэл явуулна.')) return
     setConfirming(true)
     try {
       await teacherConfirmAllPickedUp()
       setConfirmed(true)
     } catch {
-      alert('Алдаа гарлаа')
+      // silent
     } finally {
       setConfirming(false)
+      setShowModal(false)
     }
   }
 
@@ -289,7 +290,7 @@ export default function TeacherPickupPage() {
           {/* Confirm button */}
           {!confirmed && (
             <button
-              onClick={handleConfirm}
+              onClick={() => setShowModal(true)}
               disabled={confirming || !allPickedUp}
               className={`mt-5 w-full py-3 rounded-xl text-sm font-semibold transition ${
                 allPickedUp && !confirming
@@ -315,6 +316,48 @@ export default function TeacherPickupPage() {
           )}
         </div>
       </div>
+      {/* Confirm Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <polyline points="17 11 19 13 23 9"/>
+              </svg>
+            </div>
+
+            <h2 className="text-lg font-bold text-gray-800 mb-2">
+              Бүгдийг хүлээлгэж өгсөн үү?
+            </h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Баталгаажуулсны дараа Admin-д мэдэгдэл автоматаар явуулагдана.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowModal(false)}
+                className="flex-1 py-3 rounded-xl border text-sm font-medium text-gray-600 hover:bg-gray-50 transition"
+              >
+                Болих
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={confirming}
+                className="flex-1 py-3 rounded-xl bg-[#1E1B4B] text-white text-sm font-semibold hover:bg-[#2d2a6e] disabled:opacity-50 transition"
+              >
+                {confirming ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Явуулж байна
+                  </span>
+                ) : 'Тийм, явуулах'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   )
 }
