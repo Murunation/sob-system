@@ -112,6 +112,9 @@ model Teacher {
   feedbacks   Feedback[]
   attendances Attendance[]
   qrTokens    QrToken[]
+  pickupTokens PickupToken[]
+  childPickups ChildPickup[]
+  pickupSessions PickupSession[]
 
   @@index([isArchived])
 }
@@ -139,9 +142,10 @@ model Parent {
   address   String?
   user      User     @relation(fields: [userId], references: [id])
 
-  students  Student[]
-  feedbacks Feedback[]
-  payments  Payment[]
+  students     Student[]
+  feedbacks    Feedback[]
+  payments     Payment[]
+  childPickups ChildPickup[]
 }
 
 // ==========================================
@@ -180,10 +184,11 @@ model Student {
   group       Group?        @relation(fields: [groupId], references: [id])
   parent      Parent?       @relation(fields: [parentId], references: [id])
 
-  attendances Attendance[]
-  mealLogs    MealLog[]
-  reviews     Review[]
-  payments    Payment[]
+  attendances  Attendance[]
+  mealLogs     MealLog[]
+  reviews      Review[]
+  payments     Payment[]
+  childPickups ChildPickup[]
 
   @@index([status, createdAt(sort: Desc)])
   @@index([groupId])
@@ -404,4 +409,57 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([userId, createdAt(sort: Desc)])
+}
+
+// ==========================================
+// АВАЛТЫН QR TOKEN
+// ==========================================
+
+model PickupToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  teacherId Int
+  date      DateTime
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  teacher   Teacher  @relation(fields: [teacherId], references: [id])
+
+  @@index([token])
+  @@index([teacherId, date])
+}
+
+// ==========================================
+// ХҮҮХЭД АВАЛТЫН БҮРТГЭЛ
+// ==========================================
+
+model ChildPickup {
+  id         Int      @id @default(autoincrement())
+  studentId  Int
+  parentId   Int
+  teacherId  Int
+  pickedUpAt DateTime @default(now())
+
+  student    Student  @relation(fields: [studentId], references: [id])
+  parent     Parent   @relation(fields: [parentId], references: [id])
+  teacher    Teacher  @relation(fields: [teacherId], references: [id])
+
+  @@index([teacherId, pickedUpAt])
+  @@index([studentId])
+}
+
+// ==========================================
+// БАГШ БҮГДИЙГ ХҮЛЭЭЛГЭЖ ӨГСНИЙ БҮРТГЭЛ
+// ==========================================
+
+model PickupSession {
+  id          Int      @id @default(autoincrement())
+  teacherId   Int
+  date        DateTime
+  completedAt DateTime @default(now())
+
+  teacher     Teacher  @relation(fields: [teacherId], references: [id])
+
+  @@index([teacherId, date])
+  @@index([completedAt(sort: Desc)])
 }
