@@ -471,7 +471,7 @@ export default function HomePage() {
 
       {/* ── MODAL ──────────────────────────────────────────────────────── */}
       {openDemo && <DemoForm onClose={() => setOpenDemo(false)} />}
-
+ 
       {/* ── FOOTER ─────────────────────────────────────────────────────── */}
       <footer className="bg-white border-t py-12">
         <div className="max-w-6xl mx-auto px-6">
