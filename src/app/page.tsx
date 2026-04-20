@@ -336,7 +336,7 @@ export default function HomePage() {
               {
                 delay: 0, highlight: false,
                 title: "📅 Сарын багц", desc: "Сар бүр төлбөр төлөх уян хатан сонголт.",
-                price: "499.999₮", priceLabel: null,
+                price: "299.999₮", priceLabel: null,
                 features: ["QR Ирц", "Эцэг эхийн харилцаа", "Төлбөрийн систем", "Тайлан"],
                 cta: null,
               },
