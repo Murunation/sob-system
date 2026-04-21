@@ -170,7 +170,7 @@ export default function DemoForm({ onClose }: { onClose: () => void }) {
               {step === 3 && (
                 <motion.div key="started">
                   <h2 className="text-xl font-semibold mb-4">
-                    Та эхэлсэн үү?
+                    Та үйл ажиллагаагаа эхэлсэн үү?
                   </h2>
 
                   <div className="grid grid-cols-2 gap-3">
